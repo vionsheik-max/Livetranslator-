@@ -137,12 +137,26 @@ class MainActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
+            val projectionStarted = screenCaptureManager.startProjection(
+                resultCode = resultCode,
+                permissionData = projectionData,
+            )
+            if (!projectionStarted) {
+                settingsRepository.setLiveTranslationEnabled(false)
+                LiveTranslateOverlayService.stop(this@MainActivity)
+                return@launch
+            }
+
             settingsRepository.setLiveTranslationEnabled(true)
+            settingsRepository.setOverlayExpanded(false)
+            overlayPermissionGranted.value = OverlayPermissionManager.canDrawOverlays(this@MainActivity)
+            if (!overlayPermissionGranted.value) {
+                settingsRepository.setLiveTranslationEnabled(false)
+                screenCaptureManager.stopProjection()
+                return@launch
+            }
+
+            LiveTranslateOverlayService.start(this@MainActivity)
         }
-        LiveTranslateOverlayService.start(
-            context = this,
-            projectionResultCode = resultCode,
-            projectionData = projectionData,
-        )
     }
 }

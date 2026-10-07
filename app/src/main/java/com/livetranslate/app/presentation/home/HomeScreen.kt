@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.livetranslate.app.capture.CaptureSessionState
 import com.livetranslate.app.domain.model.AppLanguage
 import com.livetranslate.app.domain.model.TranslationMode
 import com.livetranslate.app.presentation.theme.DeepOcean
@@ -55,10 +56,12 @@ import com.livetranslate.app.presentation.theme.SoftMint
 fun HomeScreen(
     uiState: HomeUiState,
     overlayPermissionGranted: Boolean,
+    captureSessionState: CaptureSessionState,
     onTargetLanguageSelected: (AppLanguage) -> Unit,
     onLiveTranslationToggled: (Boolean) -> Unit,
     onModeSelected: (TranslationMode) -> Unit,
     onRequestOverlayPermission: () -> Unit,
+    onRequestScreenCapturePermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -95,7 +98,9 @@ fun HomeScreen(
             HeaderCard(description = uiState.description)
             ImplementationCard(
                 overlayPermissionGranted = overlayPermissionGranted,
+                captureSessionState = captureSessionState,
                 onRequestOverlayPermission = onRequestOverlayPermission,
+                onRequestScreenCapturePermission = onRequestScreenCapturePermission,
             )
             LanguageCard(
                 selectedLanguage = uiState.targetLanguage,
@@ -120,13 +125,15 @@ fun HomeScreen(
 @Composable
 private fun ImplementationCard(
     overlayPermissionGranted: Boolean,
+    captureSessionState: CaptureSessionState,
     onRequestOverlayPermission: () -> Unit,
+    onRequestScreenCapturePermission: () -> Unit,
 ) {
     GlassCard {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SectionHeading(
                 title = "SESSION STATUS",
-                subtitle = "Milestone 2 adds the real floating overlay service and position persistence.",
+                subtitle = "Overlay and screen capture must both be ready before the live pipeline can run.",
             )
             Text(
                 text = if (overlayPermissionGranted) {
@@ -138,16 +145,62 @@ private fun ImplementationCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "MediaProjection capture, OCR, language detection, and in-place translation rendering are not wired yet in this build.",
+                text = when (captureSessionState) {
+                    CaptureSessionState.PermissionRequired ->
+                        "Screen capture permission is still required. Secure surfaces remain blocked by Android."
+                    CaptureSessionState.Starting ->
+                        "MediaProjection is starting and preparing the capture session."
+                    is CaptureSessionState.Ready ->
+                        "MediaProjection is active at ${captureSessionState.captureWidth}x${captureSessionState.captureHeight}."
+                    is CaptureSessionState.Error -> captureSessionState.message
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            CaptureStatusChip(captureSessionState = captureSessionState)
             if (!overlayPermissionGranted) {
                 OutlinedButton(onClick = onRequestOverlayPermission) {
                     Text("Grant overlay access")
                 }
             }
+            if (captureSessionState is CaptureSessionState.PermissionRequired ||
+                captureSessionState is CaptureSessionState.Error
+            ) {
+                OutlinedButton(onClick = onRequestScreenCapturePermission) {
+                    Text("Grant screen capture access")
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun CaptureStatusChip(
+    captureSessionState: CaptureSessionState,
+) {
+    val (label, tint) = when (captureSessionState) {
+        CaptureSessionState.PermissionRequired ->
+            "Capture permission required" to ElectricBlue.copy(alpha = 0.14f)
+        CaptureSessionState.Starting ->
+            "Capture starting" to SoftMint.copy(alpha = 0.16f)
+        is CaptureSessionState.Ready ->
+            "Capture ready" to SoftMint.copy(alpha = 0.22f)
+        is CaptureSessionState.Error ->
+            "Capture error" to Color(0x33FF7B91)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = tint,
+        tonalElevation = 0.dp,
+        border = BorderStroke(1.dp, OverlayBorder.copy(alpha = 0.65f)),
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
