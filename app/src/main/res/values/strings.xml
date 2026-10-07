@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Live Translate</string>
+    <string name="overlay_notification_title">Live Translate overlay active</string>
+    <string name="overlay_notification_body">Floating controls stay available while Live Translate is enabled.</string>
+    <string name="overlay_notification_channel_name">Live Translate overlay</string>
+    <string name="overlay_notification_channel_description">Keeps the floating Live Translate controls available over other apps.</string>
 </resources>

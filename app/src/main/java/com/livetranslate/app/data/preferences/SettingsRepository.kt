@@ -1,6 +1,7 @@
 package com.livetranslate.app.data.preferences
 
 import com.livetranslate.app.domain.model.AppLanguage
+import com.livetranslate.app.domain.model.OverlayPosition
 import com.livetranslate.app.domain.model.TranslationMode
 import kotlinx.coroutines.flow.Flow
 
@@ -12,4 +13,8 @@ interface SettingsRepository {
     suspend fun setLiveTranslationEnabled(enabled: Boolean)
 
     suspend fun setMode(mode: TranslationMode)
+
+    suspend fun setOverlayPosition(position: OverlayPosition)
+
+    suspend fun setOverlayExpanded(expanded: Boolean)
 }
