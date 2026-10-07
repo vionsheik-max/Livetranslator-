@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.livetranslate.app.domain.model.AppLanguage
+import com.livetranslate.app.domain.model.OverlayPosition
 import com.livetranslate.app.domain.model.TranslationMode
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -37,6 +39,13 @@ class DataStoreSettingsRepository(
                 selectedMode = preferences[TRANSLATION_MODE_KEY]
                     ?.let { runCatching { TranslationMode.valueOf(it) }.getOrNull() }
                     ?: TranslationMode.AUTOMATIC,
+                overlayPosition = OverlayPosition(
+                    xFraction = (preferences[OVERLAY_X_FRACTION_KEY] ?: DEFAULT_OVERLAY_X_FRACTION)
+                        .coerceIn(0f, 1f),
+                    yFraction = (preferences[OVERLAY_Y_FRACTION_KEY] ?: DEFAULT_OVERLAY_Y_FRACTION)
+                        .coerceIn(0f, 1f),
+                ),
+                overlayExpanded = preferences[OVERLAY_EXPANDED_KEY] ?: false,
             )
         }
 
@@ -52,11 +61,27 @@ class DataStoreSettingsRepository(
         dataStore.edit { it[TRANSLATION_MODE_KEY] = mode.name }
     }
 
+    override suspend fun setOverlayPosition(position: OverlayPosition) {
+        dataStore.edit {
+            it[OVERLAY_X_FRACTION_KEY] = position.xFraction.coerceIn(0f, 1f)
+            it[OVERLAY_Y_FRACTION_KEY] = position.yFraction.coerceIn(0f, 1f)
+        }
+    }
+
+    override suspend fun setOverlayExpanded(expanded: Boolean) {
+        dataStore.edit { it[OVERLAY_EXPANDED_KEY] = expanded }
+    }
+
     private companion object {
         const val DATA_STORE_NAME = "live_translate_settings"
+        const val DEFAULT_OVERLAY_X_FRACTION = 1f
+        const val DEFAULT_OVERLAY_Y_FRACTION = 0.35f
 
         val TARGET_LANGUAGE_KEY = stringPreferencesKey("target_language")
         val LIVE_TRANSLATION_ENABLED_KEY = booleanPreferencesKey("live_translation_enabled")
         val TRANSLATION_MODE_KEY = stringPreferencesKey("translation_mode")
+        val OVERLAY_X_FRACTION_KEY = floatPreferencesKey("overlay_x_fraction")
+        val OVERLAY_Y_FRACTION_KEY = floatPreferencesKey("overlay_y_fraction")
+        val OVERLAY_EXPANDED_KEY = booleanPreferencesKey("overlay_expanded")
     }
 }

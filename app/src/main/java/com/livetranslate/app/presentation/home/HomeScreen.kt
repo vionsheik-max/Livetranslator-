@@ -54,9 +54,11 @@ import com.livetranslate.app.presentation.theme.SoftMint
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    overlayPermissionGranted: Boolean,
     onTargetLanguageSelected: (AppLanguage) -> Unit,
     onLiveTranslationToggled: (Boolean) -> Unit,
     onModeSelected: (TranslationMode) -> Unit,
+    onRequestOverlayPermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -91,6 +93,10 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             HeaderCard(description = uiState.description)
+            ImplementationCard(
+                overlayPermissionGranted = overlayPermissionGranted,
+                onRequestOverlayPermission = onRequestOverlayPermission,
+            )
             LanguageCard(
                 selectedLanguage = uiState.targetLanguage,
                 languages = uiState.availableLanguages,
@@ -98,13 +104,49 @@ fun HomeScreen(
             )
             LiveTranslationCard(
                 liveTranslationEnabled = uiState.liveTranslationEnabled,
+                overlayPermissionGranted = overlayPermissionGranted,
                 onLiveTranslationToggled = onLiveTranslationToggled,
+                onRequestOverlayPermission = onRequestOverlayPermission,
             )
             ModeCard(
                 selectedMode = uiState.selectedMode,
                 modes = uiState.availableModes,
                 onModeSelected = onModeSelected,
             )
+        }
+    }
+}
+
+@Composable
+private fun ImplementationCard(
+    overlayPermissionGranted: Boolean,
+    onRequestOverlayPermission: () -> Unit,
+) {
+    GlassCard {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            SectionHeading(
+                title = "SESSION STATUS",
+                subtitle = "Milestone 2 adds the real floating overlay service and position persistence.",
+            )
+            Text(
+                text = if (overlayPermissionGranted) {
+                    "Overlay access is granted. The floating Live Translate control can stay available above other apps."
+                } else {
+                    "Overlay access is still required before the floating control can appear above other apps."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "MediaProjection capture, OCR, language detection, and in-place translation rendering are not wired yet in this build.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!overlayPermissionGranted) {
+                OutlinedButton(onClick = onRequestOverlayPermission) {
+                    Text("Grant overlay access")
+                }
+            }
         }
     }
 }
@@ -189,28 +231,50 @@ private fun LanguageCard(
 @Composable
 private fun LiveTranslationCard(
     liveTranslationEnabled: Boolean,
+    overlayPermissionGranted: Boolean,
     onLiveTranslationToggled: (Boolean) -> Unit,
+    onRequestOverlayPermission: () -> Unit,
 ) {
     GlassCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                SectionHeading(
-                    title = "LIVE TRANSLATION",
-                    subtitle = "Enable the translation pipeline and floating controls.",
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    SectionHeading(
+                        title = "LIVE TRANSLATION",
+                        subtitle = "Enable the overlay session now and connect the full capture pipeline next.",
+                    )
+                }
+                Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+                Switch(
+                    checked = liveTranslationEnabled,
+                    onCheckedChange = onLiveTranslationToggled,
                 )
             }
-            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
-            Switch(
-                checked = liveTranslationEnabled,
-                onCheckedChange = onLiveTranslationToggled,
+
+            Text(
+                text = if (overlayPermissionGranted) {
+                    "The floating control can be started and adjusted independently from the main screen."
+                } else {
+                    "Grant overlay access first so the floating control can appear above other apps."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            if (!overlayPermissionGranted) {
+                OutlinedButton(onClick = onRequestOverlayPermission) {
+                    Text("Grant overlay access")
+                }
+            }
         }
     }
 }
