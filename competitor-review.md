@@ -20,7 +20,7 @@ The strongest defensible opportunity is narrower: make a calm Android overlay th
 
 ## Implemented improvement in this pass
 
-The home screen now needs to communicate a capability contract before the user starts a session: on-device OCR/translation behavior, possible model downloads, explicit screen-capture permission, and the fact that translated text is rendered only while the live session is active. The implementation plan now prioritizes the live-caption session, in-app fallback, model-pack matrix, quality controls, privacy controls, and transcript utilities in that order.
+The home screen now communicates a capability contract before the user starts a session: on-device OCR/translation behavior, possible model downloads, explicit screen-capture permission, and the fact that translated text is rendered only while the live session is active. The screen pipeline now includes ML Kit recognizers for Latin, Chinese, Japanese, Korean, and Devanagari scripts, while retaining per-line caching and current-bounds tracking. The implementation plan prioritizes the live-caption session, in-app fallback, model-pack matrix, quality controls, privacy controls, and transcript utilities in that order.
 
 ## Sources
 

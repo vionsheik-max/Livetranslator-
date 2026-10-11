@@ -11,6 +11,7 @@ datastore = "1.1.1"
 junit4 = "4.13.2"
 truth = "1.4.4"
 mlKitText = "16.0.1"
+mlKitTextScripts = "16.0.1"
 mlKitLanguageId = "17.0.6"
 mlKitTranslate = "17.0.3"
 
@@ -31,6 +32,10 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutinesPlayServices" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlKitText" }
+mlkit-text-recognition-chinese = { module = "com.google.mlkit:text-recognition-chinese", version.ref = "mlKitTextScripts" }
+mlkit-text-recognition-devanagari = { module = "com.google.mlkit:text-recognition-devanagari", version.ref = "mlKitTextScripts" }
+mlkit-text-recognition-japanese = { module = "com.google.mlkit:text-recognition-japanese", version.ref = "mlKitTextScripts" }
+mlkit-text-recognition-korean = { module = "com.google.mlkit:text-recognition-korean", version.ref = "mlKitTextScripts" }
 mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlKitLanguageId" }
 mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlKitTranslate" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }

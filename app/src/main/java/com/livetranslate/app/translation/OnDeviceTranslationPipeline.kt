@@ -10,6 +10,10 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
+import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.livetranslate.app.domain.model.AppLanguage
 import com.livetranslate.core.cache.TranslationCache
@@ -33,8 +37,12 @@ class OnDeviceTranslationPipeline(
     private val cache: TranslationCache,
     private val translationProvider: TranslationProvider = MlKitTranslationProvider(),
 ) {
-    private val recognizer: TextRecognizer = TextRecognition.getClient(
-        TextRecognizerOptions.DEFAULT_OPTIONS,
+    private val recognizers: List<TextRecognizer> = listOf(
+        TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS),
+        TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build()),
+        TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build()),
+        TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build()),
+        TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build()),
     )
     private val languageIdentifier = LanguageIdentification.getClient()
     private val detector = DefaultTextChangeDetector()
@@ -54,8 +62,12 @@ class OnDeviceTranslationPipeline(
         targetLanguage: AppLanguage,
     ): List<RenderedTranslation> {
         val image = InputImage.fromBitmap(bitmap, 0)
-        val text = recognizer.process(image).await()
-        val regions = text.textBlocks.flatMapIndexed { blockIndex, block ->
+        val blocks = coroutineScope {
+            recognizers.map { recognizer ->
+                async { recognizer.process(image).await().textBlocks }
+            }.awaitAll().flatten()
+        }
+        val regions = blocks.flatMapIndexed { blockIndex, block ->
             block.lines.mapIndexed { lineIndex, line ->
                 val bounds = line.boundingBox ?: block.boundingBox
                 TextRegion(
@@ -118,7 +130,7 @@ class OnDeviceTranslationPipeline(
     }
 
     fun close() {
-        recognizer.close()
+        recognizers.forEach { it.close() }
         languageIdentifier.close()
     }
 
