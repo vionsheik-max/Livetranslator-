@@ -96,6 +96,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             HeaderCard(description = uiState.description)
+            SessionContractCard()
             ImplementationCard(
                 overlayPermissionGranted = overlayPermissionGranted,
                 captureSessionState = captureSessionState,
@@ -117,6 +118,59 @@ fun HomeScreen(
                 selectedMode = uiState.selectedMode,
                 modes = uiState.availableModes,
                 onModeSelected = onModeSelected,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionContractCard() {
+    GlassCard {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SectionHeading(
+                title = "SESSION CONTRACT",
+                subtitle = "Know what happens before Live Translate looks at another app.",
+            )
+            CapabilityPill(
+                title = "On-device translation",
+                detail = "OCR, language detection, and cached translation run on the device after models are available.",
+                tint = SoftMint.copy(alpha = 0.18f),
+            )
+            CapabilityPill(
+                title = "Model download may be required",
+                detail = "The first language pair can need a model download; offline support depends on the installed pair and device.",
+                tint = ElectricBlue.copy(alpha = 0.16f),
+            )
+            CapabilityPill(
+                title = "Capture is user-controlled",
+                detail = "Screen capture and overlay permissions are requested only when you start a session, and stopping removes translation text.",
+                tint = Color.White.copy(alpha = 0.08f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CapabilityPill(
+    title: String,
+    detail: String,
+    tint: Color,
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = tint,
+        tonalElevation = 0.dp,
+        border = BorderStroke(1.dp, OverlayBorder.copy(alpha = 0.55f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(text = title, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -221,7 +275,7 @@ private fun HeaderCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Built for live on-screen OCR, language detection, and in-place translation overlays.",
+                text = "Live OCR, language detection, cached translation, and source-aligned text overlays in one quiet session.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
             )
@@ -303,7 +357,7 @@ private fun LiveTranslationCard(
                 ) {
                     SectionHeading(
                         title = "LIVE TRANSLATION",
-                        subtitle = "Enable the overlay session now and connect the full capture pipeline next.",
+                        subtitle = "Start a controlled screen session. The translation layer stays separate from the floating controls.",
                     )
                 }
                 Spacer(modifier = Modifier.padding(horizontal = 8.dp))
