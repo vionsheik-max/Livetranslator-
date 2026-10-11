@@ -3,6 +3,8 @@ package com.livetranslate.app
 import android.app.Activity
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
@@ -19,6 +21,7 @@ import com.livetranslate.app.presentation.home.HomeScreen
 import com.livetranslate.app.presentation.home.HomeViewModel
 import com.livetranslate.app.presentation.theme.LiveTranslateTheme
 import com.livetranslate.app.service.LiveTranslateOverlayService
+import com.livetranslate.app.service.VoiceInterpreterService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -28,6 +31,19 @@ class MainActivity : ComponentActivity() {
     private lateinit var screenCaptureManager: ScreenCaptureManager
     private lateinit var mediaProjectionManager: MediaProjectionManager
     private val overlayPermissionGranted = mutableStateOf(false)
+    private var pendingVoiceStart = false
+    private val microphonePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted && pendingVoiceStart) {
+            pendingVoiceStart = false
+            lifecycleScope.launch { settingsRepository.setVoiceInterpreterEnabled(true) }
+            VoiceInterpreterService.start(this)
+        } else if (!granted) {
+            pendingVoiceStart = false
+            lifecycleScope.launch { settingsRepository.setVoiceInterpreterEnabled(false) }
+        }
+    }
     private val screenCapturePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -60,6 +76,7 @@ class MainActivity : ComponentActivity() {
                     captureSessionState = captureSessionState,
                     onTargetLanguageSelected = viewModel::onTargetLanguageSelected,
                     onLiveTranslationToggled = ::handleLiveTranslationToggle,
+                    onVoiceInterpreterToggled = ::handleVoiceInterpreterToggle,
                     onModeSelected = viewModel::onModeSelected,
                     onRequestOverlayPermission = ::requestOverlayPermission,
                     onRequestScreenCapturePermission = ::requestScreenCapturePermission,
@@ -87,6 +104,14 @@ class MainActivity : ComponentActivity() {
             } else if (settings.liveTranslationEnabled && permissionGranted) {
                 LiveTranslateOverlayService.start(this@MainActivity)
             }
+            if (settings.voiceInterpreterEnabled) {
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    VoiceInterpreterService.start(this@MainActivity)
+                } else {
+                    settingsRepository.setVoiceInterpreterEnabled(false)
+                    VoiceInterpreterService.stop(this@MainActivity)
+                }
+            }
         }
     }
 
@@ -113,6 +138,21 @@ class MainActivity : ComponentActivity() {
             screenCaptureManager.stopProjection()
             LiveTranslateOverlayService.stop(this)
         }
+    }
+
+    private fun handleVoiceInterpreterToggle(enabled: Boolean) {
+        if (!enabled) {
+            lifecycleScope.launch { settingsRepository.setVoiceInterpreterEnabled(false) }
+            VoiceInterpreterService.stop(this)
+            return
+        }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            pendingVoiceStart = true
+            microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        lifecycleScope.launch { settingsRepository.setVoiceInterpreterEnabled(true) }
+        VoiceInterpreterService.start(this)
     }
 
     private fun requestOverlayPermission() {

@@ -30,7 +30,7 @@ Add downloadable model packs for the highest-value language pairs with storage m
 
 ### P1 — live captions
 
-Implement a dedicated microphone caption pipeline with clear speech-session lifecycle, sentence/turn boundaries, speaker labels where reliable, noise/uncertainty feedback, headset support, configurable typography, and optional translated audio. Keep it separate from screen OCR so a caption failure cannot stop the screen overlay. The UI should distinguish continuous listening, text-only captions, translated audio, and two-person conversation.
+Implemented in the current release as a dedicated microphone foreground service. The service requests microphone permission from the user, uses Android SpeechRecognizer partial results, identifies the spoken language, downloads the required ML Kit translation model when needed, and renders translated captions in a separate non-touchable overlay. The session has an explicit on/off lifecycle and a system-visible foreground notification. It is intentionally text-first; speaker separation, translated audio, headset routing, and transcript export remain follow-up work. Keep it separate from screen OCR so a caption failure cannot stop the screen overlay.
 
 ### P2 — utility and breadth
 

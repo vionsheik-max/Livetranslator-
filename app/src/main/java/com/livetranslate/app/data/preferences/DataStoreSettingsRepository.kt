@@ -36,6 +36,7 @@ class DataStoreSettingsRepository(
                     preferences[TARGET_LANGUAGE_KEY] ?: AppLanguage.ENGLISH.tag,
                 ),
                 liveTranslationEnabled = preferences[LIVE_TRANSLATION_ENABLED_KEY] ?: false,
+                voiceInterpreterEnabled = preferences[VOICE_INTERPRETER_ENABLED_KEY] ?: false,
                 selectedMode = preferences[TRANSLATION_MODE_KEY]
                     ?.let { runCatching { TranslationMode.valueOf(it) }.getOrNull() }
                     ?: TranslationMode.AUTOMATIC,
@@ -55,6 +56,9 @@ class DataStoreSettingsRepository(
 
     override suspend fun setLiveTranslationEnabled(enabled: Boolean) {
         dataStore.edit { it[LIVE_TRANSLATION_ENABLED_KEY] = enabled }
+    }
+    override suspend fun setVoiceInterpreterEnabled(enabled: Boolean) {
+        dataStore.edit { it[VOICE_INTERPRETER_ENABLED_KEY] = enabled }
     }
 
     override suspend fun setMode(mode: TranslationMode) {
@@ -79,6 +83,7 @@ class DataStoreSettingsRepository(
 
         val TARGET_LANGUAGE_KEY = stringPreferencesKey("target_language")
         val LIVE_TRANSLATION_ENABLED_KEY = booleanPreferencesKey("live_translation_enabled")
+        val VOICE_INTERPRETER_ENABLED_KEY = booleanPreferencesKey("voice_interpreter_enabled")
         val TRANSLATION_MODE_KEY = stringPreferencesKey("translation_mode")
         val OVERLAY_X_FRACTION_KEY = floatPreferencesKey("overlay_x_fraction")
         val OVERLAY_Y_FRACTION_KEY = floatPreferencesKey("overlay_y_fraction")

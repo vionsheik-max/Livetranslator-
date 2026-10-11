@@ -59,6 +59,7 @@ fun HomeScreen(
     captureSessionState: CaptureSessionState,
     onTargetLanguageSelected: (AppLanguage) -> Unit,
     onLiveTranslationToggled: (Boolean) -> Unit,
+    onVoiceInterpreterToggled: (Boolean) -> Unit,
     onModeSelected: (TranslationMode) -> Unit,
     onRequestOverlayPermission: () -> Unit,
     onRequestScreenCapturePermission: () -> Unit,
@@ -97,6 +98,10 @@ fun HomeScreen(
         ) {
             HeaderCard(description = uiState.description)
             SessionContractCard()
+            VoiceInterpreterCard(
+                enabled = uiState.voiceInterpreterEnabled,
+                onEnabledChanged = onVoiceInterpreterToggled,
+            )
             ImplementationCard(
                 overlayPermissionGranted = overlayPermissionGranted,
                 captureSessionState = captureSessionState,
@@ -172,6 +177,37 @@ private fun CapabilityPill(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun VoiceInterpreterCard(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                SectionHeading(
+                    title = "LIVE INTERPRETER",
+                    subtitle = "Translate spoken dialogue into captions over the current screen.",
+                )
+                Text(
+                    text = "Uses microphone permission and a visible foreground session. The first language pair may download a model.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
         }
     }
 }

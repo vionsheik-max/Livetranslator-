@@ -11,6 +11,7 @@ interface SettingsRepository {
     suspend fun setTargetLanguage(language: AppLanguage)
 
     suspend fun setLiveTranslationEnabled(enabled: Boolean)
+    suspend fun setVoiceInterpreterEnabled(enabled: Boolean)
 
     suspend fun setMode(mode: TranslationMode)
 

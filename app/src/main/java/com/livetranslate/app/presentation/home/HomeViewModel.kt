@@ -21,6 +21,7 @@ class HomeViewModel(
             HomeUiState(
                 targetLanguage = settings.targetLanguage,
                 liveTranslationEnabled = settings.liveTranslationEnabled,
+                voiceInterpreterEnabled = settings.voiceInterpreterEnabled,
                 selectedMode = settings.selectedMode,
             )
         }
@@ -39,6 +40,11 @@ class HomeViewModel(
     fun onLiveTranslationToggled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setLiveTranslationEnabled(enabled)
+        }
+    }
+    fun onVoiceInterpreterToggled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setVoiceInterpreterEnabled(enabled)
         }
     }
 

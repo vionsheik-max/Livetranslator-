@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
@@ -25,6 +26,10 @@
         <service
             android:name=".service.LiveTranslateOverlayService"
             android:foregroundServiceType="mediaProjection"
+            android:exported="false" />
+        <service
+            android:name=".service.VoiceInterpreterService"
+            android:foregroundServiceType="microphone"
             android:exported="false" />
     </application>
 

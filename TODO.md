@@ -10,6 +10,7 @@
 - [ ] Translations are positioned from OCR bounds, use a text size derived from the source text bounds, and disappear when the source region disappears.
 - [ ] Screen frames are processed through OCR, language identification, translation, caching, and coordinate mapping.
 - [ ] Android 14+ foreground-service and MediaProjection requirements are declared correctly.
-- [ ] The live-caption mode has an explicit lifecycle, typography controls, and online/offline capability labeling.
+- [x] A live interpreter session has microphone permission, foreground lifecycle, partial speech recognition, on-device translation, and translated caption overlay.
+- [ ] Add speaker separation, translated audio, transcript export, and verified per-device offline labels to the live-caption mode.
 - [ ] Sensitive paths disclose screen, microphone, image, copied-text, and retention behavior.
 - [ ] Existing geometry, cache, and frame-diff tests pass, and the Android project builds successfully.

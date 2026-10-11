@@ -5,4 +5,7 @@
     <string name="overlay_notification_body">Floating controls stay available while Live Translate is enabled.</string>
     <string name="overlay_notification_channel_name">Live Translate overlay</string>
     <string name="overlay_notification_channel_description">Keeps the floating Live Translate controls available over other apps.</string>
+    <string name="voice_notification_title">Live interpreter active</string>
+    <string name="voice_notification_body">Listening and translating speech into captions.</string>
+    <string name="voice_notification_channel_name">Live interpreter</string>
 </resources>
