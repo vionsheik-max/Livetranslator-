@@ -2,6 +2,7 @@
 agp = "8.7.3"
 kotlin = "2.0.21"
 coroutines = "1.9.0"
+coroutinesPlayServices = "1.9.0"
 lifecycle = "2.8.7"
 activityCompose = "1.9.3"
 composeBom = "2024.11.00"
@@ -9,6 +10,9 @@ coreKtx = "1.15.0"
 datastore = "1.1.1"
 junit4 = "4.13.2"
 truth = "1.4.4"
+mlKitText = "16.0.1"
+mlKitLanguageId = "17.0.6"
+mlKitTranslate = "17.0.3"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -25,6 +29,10 @@ androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-ru
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutinesPlayServices" }
+mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlKitText" }
+mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlKitLanguageId" }
+mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlKitTranslate" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
 

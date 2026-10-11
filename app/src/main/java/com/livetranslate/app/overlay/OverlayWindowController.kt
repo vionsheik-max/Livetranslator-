@@ -63,6 +63,7 @@ class OverlayWindowController(
     private val onLiveTranslationToggled: (Boolean) -> Unit,
     private val onTargetLanguageSelected: (AppLanguage) -> Unit,
     private val onModeSelected: (TranslationMode) -> Unit,
+    private val onRefresh: () -> Unit,
     private val onOpenApp: () -> Unit,
     private val onStopSession: () -> Unit,
 ) {
@@ -98,6 +99,7 @@ class OverlayWindowController(
                         onCycleMode = {
                             onModeSelected(state.selectedMode.next())
                         },
+                        onRefresh = onRefresh,
                         onOpenApp = onOpenApp,
                         onClose = onStopSession,
                         onDrag = ::moveBy,
@@ -250,6 +252,7 @@ private fun OverlayContent(
     onToggleLiveTranslation: (Boolean) -> Unit,
     onCycleLanguage: () -> Unit,
     onCycleMode: () -> Unit,
+    onRefresh: () -> Unit,
     onOpenApp: () -> Unit,
     onClose: () -> Unit,
     onDrag: (Int, Int) -> Unit,
@@ -261,6 +264,7 @@ private fun OverlayContent(
             onToggleLiveTranslation = onToggleLiveTranslation,
             onCycleLanguage = onCycleLanguage,
             onCycleMode = onCycleMode,
+            onRefresh = onRefresh,
             onOpenApp = onOpenApp,
             onClose = onClose,
             onDrag = onDrag,
@@ -321,6 +325,7 @@ private fun ExpandedOverlay(
     onToggleLiveTranslation: (Boolean) -> Unit,
     onCycleLanguage: () -> Unit,
     onCycleMode: () -> Unit,
+    onRefresh: () -> Unit,
     onOpenApp: () -> Unit,
     onClose: () -> Unit,
     onDrag: (Int, Int) -> Unit,
@@ -358,24 +363,11 @@ private fun ExpandedOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(
-                        text = "Live Translate",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = "Floating controls",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(text = "Live Translate", style = MaterialTheme.typography.titleMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onOpenApp) {
-                        Text("App")
-                    }
-                    OutlinedButton(onClick = onToggleExpanded) {
-                        Text("Min")
-                    }
+                    OutlinedButton(onClick = onRefresh) { Text("↻") }
+                    OutlinedButton(onClick = onToggleExpanded) { Text("−") }
+                    OutlinedButton(onClick = onClose) { Text("×") }
                 }
             }
 
@@ -384,24 +376,6 @@ private fun ExpandedOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = "Live Translation",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    Text(
-                        text = if (uiState.liveTranslationEnabled) {
-                            "Overlay session is active"
-                        } else {
-                            "Session is paused"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 Switch(
                     checked = uiState.liveTranslationEnabled,
                     onCheckedChange = onToggleLiveTranslation,
@@ -422,18 +396,6 @@ private fun ExpandedOverlay(
                 Text("Mode: ${uiState.selectedMode.title}")
             }
 
-            Text(
-                text = "Capture, OCR, and in-place translation rendering continue in the next milestone.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onClose,
-            ) {
-                Text("Close session")
-            }
         }
     }
 }

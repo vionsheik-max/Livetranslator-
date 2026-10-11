@@ -6,8 +6,10 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -18,151 +20,140 @@ import com.livetranslate.app.data.preferences.SettingsRepository
 import com.livetranslate.app.overlay.OverlayPermissionManager
 import com.livetranslate.app.overlay.OverlayUiState
 import com.livetranslate.app.overlay.OverlayWindowController
+import com.livetranslate.app.overlay.TranslationTextOverlayController
+import com.livetranslate.app.translation.OnDeviceTranslationPipeline
+import com.livetranslate.core.cache.InMemoryTranslationCache
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class LiveTranslateOverlayService : LifecycleService() {
-
     private val settingsRepository: SettingsRepository
         get() = (application as LiveTranslateApplication).appContainer.settingsRepository
+    private val captureManager
+        get() = (application as LiveTranslateApplication).appContainer.screenCaptureManager
+    private val translationPipeline = OnDeviceTranslationPipeline(InMemoryTranslationCache())
+    private val textOverlayController by lazy { TranslationTextOverlayController(this, this) }
+    private var settingsJob: Job? = null
+    private var translationJob: Job? = null
 
     private val overlayController: OverlayWindowController by lazy {
         OverlayWindowController(
             context = this,
             lifecycleOwner = this,
-            onPositionChanged = { position ->
-                lifecycleScope.launch {
-                    settingsRepository.setOverlayPosition(position)
-                }
-            },
-            onExpandedChanged = { expanded ->
-                lifecycleScope.launch {
-                    settingsRepository.setOverlayExpanded(expanded)
-                }
-            },
-            onLiveTranslationToggled = { enabled ->
-                lifecycleScope.launch {
-                    settingsRepository.setLiveTranslationEnabled(enabled)
-                }
-            },
-            onTargetLanguageSelected = { language ->
-                lifecycleScope.launch {
-                    settingsRepository.setTargetLanguage(language)
-                }
-            },
-            onModeSelected = { mode ->
-                lifecycleScope.launch {
-                    settingsRepository.setMode(mode)
-                }
-            },
+            onPositionChanged = { position -> lifecycleScope.launch { settingsRepository.setOverlayPosition(position) } },
+            onExpandedChanged = { expanded -> lifecycleScope.launch { settingsRepository.setOverlayExpanded(expanded) } },
+            onLiveTranslationToggled = { enabled -> lifecycleScope.launch { settingsRepository.setLiveTranslationEnabled(enabled) } },
+            onTargetLanguageSelected = { language -> lifecycleScope.launch { settingsRepository.setTargetLanguage(language) } },
+            onModeSelected = { mode -> lifecycleScope.launch { settingsRepository.setMode(mode) } },
+            onRefresh = translationPipeline::reset,
             onOpenApp = ::openMainApp,
-            onStopSession = {
-                stopSession(resetSetting = true)
-            },
+            onStopSession = { stopSession(resetSetting = true) },
         )
     }
 
-    private var settingsJob: Job? = null
-
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int,
-    ): Int {
-        when (intent?.action) {
-            ACTION_STOP -> {
-                stopSession(resetSetting = true)
-                return START_NOT_STICKY
-            }
-
-            ACTION_START,
-            null -> startSession()
-
-            else -> startSession()
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            stopSession(resetSetting = true)
+            return START_NOT_STICKY
         }
-
+        startSession()
         return START_STICKY
     }
 
     override fun onDestroy() {
         settingsJob?.cancel()
+        translationJob?.cancel()
         overlayController.remove()
+        textOverlayController.remove()
+        translationPipeline.close()
         super.onDestroy()
     }
 
     private fun startSession() {
         if (!OverlayPermissionManager.canDrawOverlays(this)) {
-            lifecycleScope.launch {
-                settingsRepository.setLiveTranslationEnabled(false)
-            }
+            lifecycleScope.launch { settingsRepository.setLiveTranslationEnabled(false) }
             stopSelf()
             return
         }
-
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            buildNotification(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION else 0,
+        )
         overlayController.show()
-
-        if (settingsJob == null) {
-            settingsJob = lifecycleScope.launch {
-                settingsRepository.settings.collectLatest { settings ->
-                    if (!settings.liveTranslationEnabled) {
-                        stopSession(resetSetting = false)
-                        return@collectLatest
-                    }
-
-                    overlayController.update(
-                        state = OverlayUiState(
-                            liveTranslationEnabled = settings.liveTranslationEnabled,
-                            targetLanguage = settings.targetLanguage,
-                            selectedMode = settings.selectedMode,
-                            isExpanded = settings.overlayExpanded,
-                        ),
-                        overlayPosition = settings.overlayPosition,
-                    )
+        textOverlayController.show()
+        if (settingsJob != null) return
+        settingsJob = lifecycleScope.launch {
+            settingsRepository.settings.collectLatest { settings ->
+                if (!settings.liveTranslationEnabled) {
+                    stopSession(resetSetting = false)
+                    return@collectLatest
                 }
+                overlayController.update(
+                    state = OverlayUiState(
+                        liveTranslationEnabled = true,
+                        targetLanguage = settings.targetLanguage,
+                        selectedMode = settings.selectedMode,
+                        isExpanded = settings.overlayExpanded,
+                    ),
+                    overlayPosition = settings.overlayPosition,
+                )
+                translationJob?.cancel()
+                translationJob = launch(Dispatchers.Default) { runTranslationLoop(settings.targetLanguage) }
             }
         }
     }
 
-    private fun stopSession(resetSetting: Boolean) {
-        settingsJob?.cancel()
-        settingsJob = null
-        overlayController.remove()
+    private suspend fun runTranslationLoop(targetLanguage: com.livetranslate.app.domain.model.AppLanguage) {
+        while (true) {
+            val frame = captureManager.capture()
+            if (frame != null) {
+                val translated = runCatching {
+                    translationPipeline.process(
+                        bitmap = frame.bitmap,
+                        captureWidth = frame.captureWidth,
+                        captureHeight = frame.captureHeight,
+                        displayWidth = frame.screenWidth,
+                        displayHeight = frame.screenHeight,
+                        targetLanguage = targetLanguage,
+                    )
+                }.getOrDefault(emptyList())
+                textOverlayController.render(translated)
+                frame.bitmap.recycle()
+            }
+            delay(180L)
+        }
+    }
 
+    private fun stopSession(resetSetting: Boolean) {
+        settingsJob?.cancel(); settingsJob = null
+        translationJob?.cancel(); translationJob = null
+        overlayController.remove(); textOverlayController.remove()
         if (resetSetting) {
             lifecycleScope.launch {
                 settingsRepository.setOverlayExpanded(false)
                 settingsRepository.setLiveTranslationEnabled(false)
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
             }
-            return
         }
-
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
     private fun openMainApp() {
-        startActivity(
-            Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            },
-        )
+        startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
     }
 
     private fun buildNotification(): Notification {
         val openAppIntent = PendingIntent.getActivity(
-            this,
-            100,
-            Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            },
+            this, 100,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setContentTitle(getString(R.string.overlay_notification_title))
@@ -174,19 +165,14 @@ class LiveTranslateOverlayService : LifecycleService() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            return
-        }
-
-        val manager = getSystemService(NotificationManager::class.java)
-        val channel = NotificationChannel(
-            NOTIFICATION_CHANNEL_ID,
-            getString(R.string.overlay_notification_channel_name),
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = getString(R.string.overlay_notification_channel_description)
-        }
-        manager.createNotificationChannel(channel)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                getString(R.string.overlay_notification_channel_name),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply { description = getString(R.string.overlay_notification_channel_description) },
+        )
     }
 
     companion object {
@@ -195,21 +181,12 @@ class LiveTranslateOverlayService : LifecycleService() {
         private const val NOTIFICATION_CHANNEL_ID = "live_translate_overlay"
         private const val NOTIFICATION_ID = 404
 
-        fun start(context: Context) {
-            ContextCompat.startForegroundService(
-                context,
-                Intent(context, LiveTranslateOverlayService::class.java).apply {
-                    action = ACTION_START
-                },
-            )
-        }
-
-        fun stop(context: Context) {
-            context.startService(
-                Intent(context, LiveTranslateOverlayService::class.java).apply {
-                    action = ACTION_STOP
-                },
-            )
-        }
+        fun start(context: Context) = ContextCompat.startForegroundService(
+            context,
+            Intent(context, LiveTranslateOverlayService::class.java).setAction(ACTION_START),
+        )
+        fun stop(context: Context) = context.startService(
+            Intent(context, LiveTranslateOverlayService::class.java).setAction(ACTION_STOP),
+        )
     }
 }

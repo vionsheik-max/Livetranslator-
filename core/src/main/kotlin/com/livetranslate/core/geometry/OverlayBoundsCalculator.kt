@@ -46,6 +46,7 @@ class OverlayBoundsCalculator(
             rawValue = position.y,
             overlayAxis = overlaySize.height,
             screenAxis = screenSize.height,
+            trailingPadding = false,
         ),
     )
 
@@ -57,10 +58,12 @@ class OverlayBoundsCalculator(
         val xRange = axisRange(
             overlayAxis = overlaySize.width,
             screenAxis = screenSize.width,
+            trailingPadding = true,
         )
         val yRange = axisRange(
             overlayAxis = overlaySize.height,
             screenAxis = screenSize.height,
+            trailingPadding = false,
         )
 
         return ScreenPoint(
@@ -82,10 +85,12 @@ class OverlayBoundsCalculator(
         val xRange = axisRange(
             overlayAxis = overlaySize.width,
             screenAxis = screenSize.width,
+            trailingPadding = true,
         )
         val yRange = axisRange(
             overlayAxis = overlaySize.height,
             screenAxis = screenSize.height,
+            trailingPadding = false,
         )
 
         return NormalizedPoint(
@@ -109,10 +114,12 @@ class OverlayBoundsCalculator(
         rawValue: Int,
         overlayAxis: Int,
         screenAxis: Int,
+        trailingPadding: Boolean = true,
     ): Int {
         val range = axisRange(
             overlayAxis = overlayAxis,
             screenAxis = screenAxis,
+            trailingPadding = trailingPadding,
         )
         return rawValue.coerceIn(range.first, range.last)
     }
@@ -120,9 +127,10 @@ class OverlayBoundsCalculator(
     private fun axisRange(
         overlayAxis: Int,
         screenAxis: Int,
+        trailingPadding: Boolean,
     ): IntRange {
         val safePadding = max(0, edgePaddingPx)
-        val maxValue = max(0, screenAxis - overlayAxis - safePadding)
+        val maxValue = max(0, screenAxis - overlayAxis - if (trailingPadding) safePadding else 0)
         val minValue = minOf(safePadding, maxValue)
         return minValue..maxValue
     }

@@ -69,6 +69,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.language.id)
+    implementation(libs.mlkit.translate)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)
