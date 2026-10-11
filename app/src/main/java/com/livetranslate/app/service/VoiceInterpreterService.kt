@@ -44,7 +44,8 @@ class VoiceInterpreterService : LifecycleService(), RecognitionListener {
         }
         lifecycleScope.launch {
             targetLanguage = settingsRepository.settings.first().targetLanguage
-            startSession()
+            runCatching { startSession() }
+                .onFailure { stopSession() }
         }
         return START_STICKY
     }
@@ -85,7 +86,7 @@ class VoiceInterpreterService : LifecycleService(), RecognitionListener {
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
-        recognizer?.startListening(intent)
+        runCatching { recognizer?.startListening(intent) }
     }
 
     private fun stopListening() {
@@ -130,7 +131,7 @@ class VoiceInterpreterService : LifecycleService(), RecognitionListener {
     }
 
     override fun onError(error: Int) {
-        if (error != SpeechRecognizer.ERROR_CLIENT) {
+        if (error != SpeechRecognizer.ERROR_CLIENT && recognizer != null) {
             restartHandler.postDelayed(::startListening, 400L)
         }
     }

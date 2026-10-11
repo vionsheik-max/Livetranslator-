@@ -78,15 +78,22 @@ class LiveTranslateOverlayService : LifecycleService() {
             stopSelf()
             return
         }
-        createNotificationChannel()
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            buildNotification(),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION else 0,
-        )
-        overlayController.show()
-        textOverlayController.show()
+        try {
+            createNotificationChannel()
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                buildNotification(),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION else 0,
+            )
+            overlayController.show()
+            textOverlayController.show()
+        } catch (error: RuntimeException) {
+            lifecycleScope.launch { settingsRepository.setLiveTranslationEnabled(false) }
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return
+        }
         if (settingsJob != null) return
         settingsJob = lifecycleScope.launch {
             settingsRepository.settings.collectLatest { settings ->

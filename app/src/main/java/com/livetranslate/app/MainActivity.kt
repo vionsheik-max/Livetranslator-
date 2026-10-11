@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     onLiveTranslationToggled = ::handleLiveTranslationToggle,
                     onVoiceInterpreterToggled = ::handleVoiceInterpreterToggle,
                     onModeSelected = viewModel::onModeSelected,
+                    onDownloadLanguagePack = viewModel::downloadLanguagePack,
                     onRequestOverlayPermission = ::requestOverlayPermission,
                     onRequestScreenCapturePermission = ::requestScreenCapturePermission,
                 )
