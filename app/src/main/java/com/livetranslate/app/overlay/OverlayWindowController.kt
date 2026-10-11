@@ -31,14 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
 import com.livetranslate.app.domain.model.AppLanguage
 import com.livetranslate.app.domain.model.OverlayPosition
 import com.livetranslate.app.domain.model.TranslationMode
@@ -81,7 +80,7 @@ class OverlayWindowController(
         }
 
         val overlayView = ComposeView(context).apply {
-            ViewTreeLifecycleOwner.set(this, lifecycleOwner)
+            setViewTreeLifecycleOwner(lifecycleOwner)
             ViewCompat.setAccessibilityPaneTitle(this, "Live Translate overlay")
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
@@ -286,8 +285,7 @@ private fun CollapsedOverlay(
         modifier = Modifier
             .size(64.dp)
             .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
+                detectDragGestures { _, dragAmount ->
                     onDrag(dragAmount.x.toInt(), dragAmount.y.toInt())
                 }
             },

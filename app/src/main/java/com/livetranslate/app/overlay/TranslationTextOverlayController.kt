@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
 import com.livetranslate.app.presentation.theme.LiveTranslateTheme
 import com.livetranslate.core.pipeline.RenderedTranslation
 import kotlin.math.roundToInt
@@ -42,7 +42,7 @@ class TranslationTextOverlayController(
     fun show() {
         if (view != null) return
         val overlay = ComposeView(appContext).apply {
-            ViewTreeLifecycleOwner.set(this, lifecycleOwner)
+            setViewTreeLifecycleOwner(lifecycleOwner)
             ViewCompat.setAccessibilityPaneTitle(this, "Live translation text")
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {

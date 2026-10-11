@@ -20,12 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
 import com.livetranslate.app.presentation.theme.LiveTranslateTheme
 
 class CaptionOverlayController(
-    context: Context,
-    lifecycleOwner: LifecycleOwner,
+    private val context: Context,
+    private val lifecycleOwner: LifecycleOwner,
 ) {
     private val windowManager = context.applicationContext.getSystemService(WindowManager::class.java)
     private val caption = mutableStateOf("")
@@ -34,7 +34,7 @@ class CaptionOverlayController(
     fun show() {
         if (view != null) return
         val overlay = ComposeView(context.applicationContext).apply {
-            ViewTreeLifecycleOwner.set(this, lifecycleOwner)
+            setViewTreeLifecycleOwner(lifecycleOwner)
             ViewCompat.setAccessibilityPaneTitle(this, "Live translated captions")
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
