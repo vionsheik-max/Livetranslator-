@@ -126,7 +126,8 @@ class LiveTranslateOverlayService : LifecycleService() {
                 textOverlayController.render(translated)
                 frame.bitmap.recycle()
             }
-            delay(180L)
+            // Refresh faster than once per second so scrolling text never waits for a full second.
+            delay(FRAME_INTERVAL_MS)
         }
     }
 
@@ -180,6 +181,7 @@ class LiveTranslateOverlayService : LifecycleService() {
         private const val ACTION_STOP = "com.livetranslate.app.action.STOP_OVERLAY"
         private const val NOTIFICATION_CHANNEL_ID = "live_translate_overlay"
         private const val NOTIFICATION_ID = 404
+        private const val FRAME_INTERVAL_MS = 180L
 
         fun start(context: Context) = ContextCompat.startForegroundService(
             context,

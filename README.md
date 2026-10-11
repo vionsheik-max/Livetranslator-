@@ -4,7 +4,7 @@ Live Translator is an Android screen translation utility designed to stay out of
 
 ## Product behavior
 
-The floating control is a small translucent, draggable orb that stays clamped inside the display. Tapping it opens a compact glass panel with icon-first controls for refresh, minimize, and stop. The translation layer is a separate non-touchable window: it contains no status labels, controls, numbers, or explanatory text. Its text size is derived from the recognized source bounds, and the next frame removes overlays whose source text is no longer visible.
+The floating control is a small translucent, draggable orb that stays clamped inside the display. Tapping it opens a compact glass panel with icon-first controls for refresh, minimize, and stop. The translation layer is a separate non-touchable window: it contains no status labels, controls, numbers, or explanatory text. The capture loop refreshes every 180 ms, processes every visible OCR line, caches unchanged translations, maps each result to the latest source bounds, and removes overlays as soon as their source line leaves the frame.
 
 ## Competitive direction
 

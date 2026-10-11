@@ -22,6 +22,11 @@ import com.livetranslate.core.model.IntRect
 import com.livetranslate.core.model.TextRegion
 import com.livetranslate.core.pipeline.RenderedTranslation
 import com.livetranslate.core.pipeline.TranslationProvider
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 
 class OnDeviceTranslationPipeline(
@@ -34,6 +39,10 @@ class OnDeviceTranslationPipeline(
     private val languageIdentifier = LanguageIdentification.getClient()
     private val detector = DefaultTextChangeDetector()
     private val coordinateMapper = CoordinateMapper()
+    private val sourceLanguageCache = object : LinkedHashMap<String, String>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean = size > 512
+    }
+    private val providerMutex = Mutex()
     private var previousFrame: DetectedTextFrame? = null
 
     suspend fun process(
@@ -65,19 +74,27 @@ class OnDeviceTranslationPipeline(
         val changes = detector.detectChanges(previousFrame, frame)
         previousFrame = frame
         val changed = changes.filter { it.current != null && it.type != com.livetranslate.core.detector.ChangeType.REMOVED }
-        changed.forEach { change ->
-            val region = change.current ?: return@forEach
-            val sourceTag = runCatching { languageIdentifier.identifyLanguage(region.text).await() }.getOrNull()
-            if (sourceTag == targetLanguage.tag || sourceTag == "und") return@forEach
-            val key = TranslationCacheKey(sourceTag, targetLanguage.tag, region.text)
-            if (cache.get(key) == null) {
-                runCatching {
-                    cache.put(key, translationProvider.translate(region.text, sourceTag, targetLanguage.tag))
+        coroutineScope {
+            changed.mapNotNull { it.current }
+                .distinctBy { it.text }
+                .map { region ->
+                    async {
+                        val sourceTag = identifySource(region.text) ?: return@async
+                        if (sourceTag == targetLanguage.tag || sourceTag == "und") return@async
+                        val key = TranslationCacheKey(sourceTag, targetLanguage.tag, region.text)
+                        if (cache.get(key) == null) {
+                            runCatching {
+                                providerMutex.withLock {
+                                    translationProvider.translate(region.text, sourceTag, targetLanguage.tag)
+                                }
+                            }.onSuccess { cache.put(key, it) }
+                        }
+                    }
                 }
-            }
+                .awaitAll()
         }
         return frame.regions.mapNotNull { region ->
-            val sourceTag = runCatching { languageIdentifier.identifyLanguage(region.text).await() }.getOrNull()
+            val sourceTag = identifySource(region.text)
             if (sourceTag == null || sourceTag == targetLanguage.tag || sourceTag == "und") return@mapNotNull null
             val translated = cache.get(TranslationCacheKey(sourceTag, targetLanguage.tag, region.text))
                 ?: return@mapNotNull null
@@ -97,11 +114,23 @@ class OnDeviceTranslationPipeline(
     fun reset() {
         previousFrame = null
         cache.clear()
+        synchronized(sourceLanguageCache) { sourceLanguageCache.clear() }
     }
 
     fun close() {
         recognizer.close()
         languageIdentifier.close()
+    }
+
+    private suspend fun identifySource(text: String): String? {
+        synchronized(sourceLanguageCache) {
+            sourceLanguageCache[text]?.let { return it }
+        }
+        val identified = runCatching { languageIdentifier.identifyLanguage(text).await() }.getOrNull()
+        if (identified != null) {
+            synchronized(sourceLanguageCache) { sourceLanguageCache[text] = identified }
+        }
+        return identified
     }
 }
 

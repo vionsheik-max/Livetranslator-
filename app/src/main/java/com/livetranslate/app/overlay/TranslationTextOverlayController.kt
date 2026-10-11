@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
@@ -76,21 +77,21 @@ class TranslationTextOverlayController(
 
 @Composable
 private fun TranslationTextLayer(items: List<RenderedTranslation>) {
+    val density = LocalDensity.current
     Box(Modifier.fillMaxSize()) {
         items.forEach { item ->
+            val width = with(density) { item.bounds.width.coerceAtLeast(1).toDp() }
+            val height = with(density) { item.bounds.height.coerceAtLeast(10).toSp() }
             Text(
                 text = item.translatedText,
                 modifier = Modifier
                     .offset { IntOffset(item.bounds.left, item.bounds.top) }
-                    .size(
-                        width = item.bounds.width.coerceAtLeast(1).dp,
-                        height = item.bounds.height.coerceAtLeast(1).dp,
-                    ),
+                    .size(width = width, height = with(density) { item.bounds.height.coerceAtLeast(1).toDp() }),
                 color = Color.White,
-                fontSize = item.bounds.height.coerceAtLeast(10).sp,
+                fontSize = height,
                 fontWeight = FontWeight.Medium,
                 lineHeight = TextUnit.Unspecified,
-                maxLines = 3,
+                maxLines = 1,
             )
         }
     }
