@@ -11,4 +11,6 @@ data class LiveTranslateSettings(
     val selectedMode: TranslationMode = TranslationMode.AUTOMATIC,
     val overlayPosition: OverlayPosition = OverlayPosition(),
     val overlayExpanded: Boolean = false,
+    val themeId: String = "mist",
+    val orbSizeDp: Float = 48f,
 )

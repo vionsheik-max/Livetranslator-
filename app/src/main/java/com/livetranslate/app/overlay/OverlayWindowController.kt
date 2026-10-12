@@ -19,6 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -43,6 +50,7 @@ import com.livetranslate.app.domain.model.OverlayPosition
 import com.livetranslate.app.domain.model.TranslationMode
 import com.livetranslate.app.presentation.theme.DeepOcean
 import com.livetranslate.app.presentation.theme.ElectricBlue
+import com.livetranslate.app.presentation.theme.AppTheme
 import com.livetranslate.app.presentation.theme.LiveTranslateTheme
 import com.livetranslate.app.presentation.theme.OverlayBorder
 import com.livetranslate.app.presentation.theme.OverlayGlass
@@ -84,8 +92,8 @@ class OverlayWindowController(
             ViewCompat.setAccessibilityPaneTitle(this, "Live Translate overlay")
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
-                LiveTranslateTheme {
-                    val state by uiState.collectAsState()
+                val state by uiState.collectAsState()
+                LiveTranslateTheme(theme = AppTheme.fromId(state.themeId)) {
                     OverlayContent(
                         uiState = state,
                         onToggleExpanded = {
@@ -268,9 +276,10 @@ private fun OverlayContent(
             onClose = onClose,
             onDrag = onDrag,
         )
-    } else {
-        CollapsedOverlay(
-            onTap = onToggleExpanded,
+        } else {
+            CollapsedOverlay(
+                uiState = uiState,
+                onTap = onToggleExpanded,
             onDrag = onDrag,
         )
     }
@@ -278,12 +287,13 @@ private fun OverlayContent(
 
 @Composable
 private fun CollapsedOverlay(
+    uiState: OverlayUiState,
     onTap: () -> Unit,
     onDrag: (Int, Int) -> Unit,
 ) {
     Surface(
         modifier = Modifier
-            .size(64.dp)
+            .size(uiState.orbSizeDp.dp)
             .pointerInput(Unit) {
                 detectDragGestures { _, dragAmount ->
                     onDrag(dragAmount.x.toInt(), dragAmount.y.toInt())
@@ -299,19 +309,15 @@ private fun CollapsedOverlay(
             modifier = Modifier.background(
                 Brush.radialGradient(
                     colors = listOf(
-                        ElectricBlue.copy(alpha = 0.32f),
-                        SoftMint.copy(alpha = 0.18f),
-                        DeepOcean.copy(alpha = 0.28f),
+                        AppTheme.fromId(uiState.themeId).primary.copy(alpha = 0.32f),
+                        AppTheme.fromId(uiState.themeId).secondary.copy(alpha = 0.18f),
+                        AppTheme.fromId(uiState.themeId).backgroundBottom.copy(alpha = 0.28f),
                     ),
                 ),
             ),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "LT",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            Icon(Icons.Rounded.Translate, "Live Translator", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(uiState.orbSizeDp.dp * 0.42f))
         }
     }
 }
@@ -363,9 +369,9 @@ private fun ExpandedOverlay(
             ) {
                 Text(text = "Live Translate", style = MaterialTheme.typography.titleMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onRefresh) { Text("↻") }
-                    OutlinedButton(onClick = onToggleExpanded) { Text("−") }
-                    OutlinedButton(onClick = onClose) { Text("×") }
+                    IconButton(onClick = onClose) { Icon(Icons.Rounded.Stop, "Stop") }
+                    IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, "Refresh") }
+                    IconButton(onClick = onToggleExpanded) { Icon(Icons.Rounded.Remove, "Minimize") }
                 }
             }
 

@@ -18,4 +18,8 @@ interface SettingsRepository {
     suspend fun setOverlayPosition(position: OverlayPosition)
 
     suspend fun setOverlayExpanded(expanded: Boolean)
+
+    suspend fun setThemeId(themeId: String)
+
+    suspend fun setOrbSizeDp(sizeDp: Float)
 }

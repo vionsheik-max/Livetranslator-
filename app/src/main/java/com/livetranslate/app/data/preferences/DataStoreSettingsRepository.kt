@@ -47,6 +47,8 @@ class DataStoreSettingsRepository(
                         .coerceIn(0f, 1f),
                 ),
                 overlayExpanded = preferences[OVERLAY_EXPANDED_KEY] ?: false,
+                themeId = preferences[THEME_ID_KEY] ?: "mist",
+                orbSizeDp = (preferences[ORB_SIZE_DP_KEY] ?: 48f).coerceIn(36f, 76f),
             )
         }
 
@@ -76,6 +78,14 @@ class DataStoreSettingsRepository(
         dataStore.edit { it[OVERLAY_EXPANDED_KEY] = expanded }
     }
 
+    override suspend fun setThemeId(themeId: String) {
+        dataStore.edit { it[THEME_ID_KEY] = themeId }
+    }
+
+    override suspend fun setOrbSizeDp(sizeDp: Float) {
+        dataStore.edit { it[ORB_SIZE_DP_KEY] = sizeDp.coerceIn(36f, 76f) }
+    }
+
     private companion object {
         const val DATA_STORE_NAME = "live_translate_settings"
         const val DEFAULT_OVERLAY_X_FRACTION = 1f
@@ -88,5 +98,7 @@ class DataStoreSettingsRepository(
         val OVERLAY_X_FRACTION_KEY = floatPreferencesKey("overlay_x_fraction")
         val OVERLAY_Y_FRACTION_KEY = floatPreferencesKey("overlay_y_fraction")
         val OVERLAY_EXPANDED_KEY = booleanPreferencesKey("overlay_expanded")
+        val THEME_ID_KEY = stringPreferencesKey("theme_id")
+        val ORB_SIZE_DP_KEY = floatPreferencesKey("orb_size_dp")
     }
 }

@@ -8,4 +8,6 @@ data class OverlayUiState(
     val targetLanguage: AppLanguage = AppLanguage.ENGLISH,
     val selectedMode: TranslationMode = TranslationMode.AUTOMATIC,
     val isExpanded: Boolean = false,
+    val themeId: String = "mist",
+    val orbSizeDp: Float = 48f,
 )

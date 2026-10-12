@@ -15,13 +15,26 @@
         android:theme="@style/Theme.LiveTranslate">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:exported="true" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <activity-alias android:name=".LauncherMist" android:enabled="true" android:exported="true" android:icon="@drawable/ic_launcher_mist" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherOcean" android:enabled="false" android:exported="true" android:icon="@drawable/ic_launcher_ocean" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherLavender" android:enabled="false" android:exported="true" android:icon="@drawable/ic_launcher_lavender" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherSage" android:enabled="false" android:exported="true" android:icon="@drawable/ic_launcher_sage" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherWarmSand" android:enabled="false" android:exported="true" android:icon="@drawable/ic_launcher_warm_sand" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherMidnight" android:enabled="false" android:exported="true" android:icon="@drawable/ic_launcher_midnight" android:targetActivity=".MainActivity">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
 
         <service
             android:name=".service.LiveTranslateOverlayService"

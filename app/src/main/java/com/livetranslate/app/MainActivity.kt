@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,11 +65,14 @@ class MainActivity : ComponentActivity() {
         overlayPermissionGranted.value = OverlayPermissionManager.canDrawOverlays(this)
 
         setContent {
-            LiveTranslateTheme {
-                val viewModel: HomeViewModel = viewModel(
-                    factory = HomeViewModel.factory(settingsRepository),
-                )
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val viewModel: HomeViewModel = viewModel(
+                factory = HomeViewModel.factory(settingsRepository),
+            )
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(uiState.theme) {
+                LauncherIconManager.apply(this@MainActivity, uiState.theme)
+            }
+            LiveTranslateTheme(theme = uiState.theme) {
                 val captureSessionState by screenCaptureManager.sessionState.collectAsStateWithLifecycle()
                 HomeScreen(
                     uiState = uiState,
@@ -79,6 +83,8 @@ class MainActivity : ComponentActivity() {
                     onVoiceInterpreterToggled = ::handleVoiceInterpreterToggle,
                     onModeSelected = viewModel::onModeSelected,
                     onDownloadLanguagePack = viewModel::downloadLanguagePack,
+                    onThemeSelected = viewModel::onThemeSelected,
+                    onOrbSizeChanged = viewModel::onOrbSizeChanged,
                     onRequestOverlayPermission = ::requestOverlayPermission,
                     onRequestScreenCapturePermission = ::requestScreenCapturePermission,
                 )

@@ -2,6 +2,7 @@ package com.livetranslate.app.presentation.home
 
 import com.livetranslate.app.domain.model.AppLanguage
 import com.livetranslate.app.domain.model.TranslationMode
+import com.livetranslate.app.presentation.theme.AppTheme
 
 data class HomeUiState(
     val description: String = "Translate what is on your screen.",
@@ -12,6 +13,8 @@ data class HomeUiState(
     val availableLanguages: List<AppLanguage> = AppLanguage.entries,
     val availableModes: List<TranslationMode> = TranslationMode.entries,
     val languagePackState: LanguagePackState = LanguagePackState.Idle,
+    val theme: AppTheme = AppTheme.MIST,
+    val orbSizeDp: Float = 48f,
 )
 
 sealed interface LanguagePackState {

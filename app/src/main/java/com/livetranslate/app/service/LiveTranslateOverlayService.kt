@@ -107,6 +107,8 @@ class LiveTranslateOverlayService : LifecycleService() {
                         targetLanguage = settings.targetLanguage,
                         selectedMode = settings.selectedMode,
                         isExpanded = settings.overlayExpanded,
+                        themeId = settings.themeId,
+                        orbSizeDp = settings.orbSizeDp,
                     ),
                     overlayPosition = settings.overlayPosition,
                 )

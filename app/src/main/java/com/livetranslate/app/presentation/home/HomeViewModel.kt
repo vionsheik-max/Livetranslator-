@@ -10,6 +10,7 @@ import com.google.mlkit.nl.translate.TranslatorOptions
 import com.livetranslate.app.data.preferences.SettingsRepository
 import com.livetranslate.app.domain.model.AppLanguage
 import com.livetranslate.app.domain.model.TranslationMode
+import com.livetranslate.app.presentation.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,8 @@ class HomeViewModel(
                 voiceInterpreterEnabled = settings.voiceInterpreterEnabled,
                 selectedMode = settings.selectedMode,
                 languagePackState = packState,
+                theme = AppTheme.fromId(settings.themeId),
+                orbSizeDp = settings.orbSizeDp,
             )
         }
         .stateIn(
@@ -53,6 +56,14 @@ class HomeViewModel(
 
     fun onModeSelected(mode: TranslationMode) = viewModelScope.launch {
         settingsRepository.setMode(mode)
+    }
+
+    fun onThemeSelected(theme: AppTheme) = viewModelScope.launch {
+        settingsRepository.setThemeId(theme.id)
+    }
+
+    fun onOrbSizeChanged(sizeDp: Float) = viewModelScope.launch {
+        settingsRepository.setOrbSizeDp(sizeDp)
     }
 
     fun downloadLanguagePack(language: AppLanguage) {
