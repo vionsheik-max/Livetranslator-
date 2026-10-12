@@ -82,6 +82,9 @@ fun HomeScreen(
     onOrbSizeChanged: (Float) -> Unit,
     onRequestOverlayPermission: () -> Unit,
     onRequestScreenCapturePermission: () -> Unit,
+    isPro: Boolean = false,
+    proPrice: String? = null,
+    onUpgrade: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var tab by remember { mutableStateOf(AppTab.HOME) }
@@ -96,7 +99,7 @@ fun HomeScreen(
                 when (tab) {
                     AppTab.HOME -> HomeTab(uiState, overlayPermissionGranted, captureSessionState, onTargetLanguageSelected, onLiveTranslationToggled, onVoiceInterpreterToggled, onModeSelected, onRequestOverlayPermission, onRequestScreenCapturePermission)
                     AppTab.LANGUAGES -> LanguagesTab(uiState, onTargetLanguageSelected, onDownloadLanguagePack)
-                    AppTab.SETTINGS -> SettingsTab(uiState, onThemeSelected, onOrbSizeChanged)
+                    AppTab.SETTINGS -> SettingsTab(uiState, onThemeSelected, onOrbSizeChanged, isPro, proPrice, onUpgrade)
                 }
             }
             BottomBar(tab = tab, theme = theme, onTabSelected = { tab = it })
@@ -154,9 +157,10 @@ private fun LanguagesTab(
 }
 
 @Composable
-private fun SettingsTab(uiState: HomeUiState, onThemeSelected: (AppTheme) -> Unit, onOrbSizeChanged: (Float) -> Unit) {
+private fun SettingsTab(uiState: HomeUiState, onThemeSelected: (AppTheme) -> Unit, onOrbSizeChanged: (Float) -> Unit, isPro: Boolean, proPrice: String?, onUpgrade: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         ReferenceHeader(title = "Settings", subtitle = "Make Live Translator feel like yours")
+        ProCard(isPro, proPrice, onUpgrade)
         SettingsRow(Icons.Rounded.Translate, "Translation", "Language, offline, cache")
         SettingsRow(Icons.Rounded.ScreenShare, "Overlay", "Floating toggle, position, display")
         SettingsRow(Icons.Rounded.Mic, "Voice", "Input, output, speech, playback")
@@ -263,6 +267,29 @@ private fun ModeRow(selected: TranslationMode, modes: List<TranslationMode>, onS
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text("Mode", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
         modes.take(3).forEach { mode -> FilterChip(selected = mode == selected, onClick = { onSelect(mode) }, label = { Text(mode.title) }, modifier = Modifier.padding(start = 5.dp)) }
+    }
+}
+
+@Composable
+private fun ProCard(isPro: Boolean, price: String?, onUpgrade: () -> Unit) {
+    GlassPanel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.24f), modifier = Modifier.size(42.dp)) {
+                Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Translate, null, tint = MaterialTheme.colorScheme.primary) }
+            }
+            Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+                Text(if (isPro) "Live Translator Pro" else "Unlock Live Translator Pro", fontWeight = FontWeight.SemiBold)
+                Text(if (isPro) "All premium features are active." else "Unlimited scanning, voice interpreter, captions, and offline packs.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (!isPro) {
+            Button(onClick = onUpgrade, modifier = Modifier.fillMaxWidth()) {
+                Text(if (price == null) "See Pro" else "Unlock Pro • $price")
+            }
+            Text("One-time purchase. No ads and no recurring fee.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Text("Thank you for supporting independent development.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 

@@ -16,6 +16,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.livetranslate.app.capture.ScreenCaptureManager
+import com.livetranslate.app.billing.BillingState
+import com.livetranslate.app.billing.PlayBillingManager
 import com.livetranslate.app.data.preferences.SettingsRepository
 import com.livetranslate.app.overlay.OverlayPermissionManager
 import com.livetranslate.app.presentation.home.HomeScreen
@@ -31,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var screenCaptureManager: ScreenCaptureManager
     private lateinit var mediaProjectionManager: MediaProjectionManager
+    private lateinit var billingManager: PlayBillingManager
     private val overlayPermissionGranted = mutableStateOf(false)
     private var pendingVoiceStart = false
     private val microphonePermissionLauncher = registerForActivityResult(
@@ -62,6 +65,7 @@ class MainActivity : ComponentActivity() {
         settingsRepository = appContainer.settingsRepository
         screenCaptureManager = appContainer.screenCaptureManager
         mediaProjectionManager = getSystemService(MediaProjectionManager::class.java)
+        billingManager = PlayBillingManager(this)
         overlayPermissionGranted.value = OverlayPermissionManager.canDrawOverlays(this)
 
         setContent {
@@ -69,6 +73,7 @@ class MainActivity : ComponentActivity() {
                 factory = HomeViewModel.factory(settingsRepository),
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val billingState by billingManager.state.collectAsStateWithLifecycle()
             LaunchedEffect(uiState.theme) {
                 LauncherIconManager.apply(this@MainActivity, uiState.theme)
             }
@@ -80,13 +85,28 @@ class MainActivity : ComponentActivity() {
                     captureSessionState = captureSessionState,
                     onTargetLanguageSelected = viewModel::onTargetLanguageSelected,
                     onLiveTranslationToggled = ::handleLiveTranslationToggle,
-                    onVoiceInterpreterToggled = ::handleVoiceInterpreterToggle,
+                    onVoiceInterpreterToggled = { enabled ->
+                        if (enabled && billingManager.state.value !is BillingState.Pro) {
+                            billingManager.launchPurchase(this@MainActivity)
+                        } else {
+                            handleVoiceInterpreterToggle(enabled)
+                        }
+                    },
                     onModeSelected = viewModel::onModeSelected,
-                    onDownloadLanguagePack = viewModel::downloadLanguagePack,
+                    onDownloadLanguagePack = { language ->
+                        if (billingManager.state.value is BillingState.Pro) {
+                            viewModel.downloadLanguagePack(language)
+                        } else {
+                            billingManager.launchPurchase(this@MainActivity)
+                        }
+                    },
                     onThemeSelected = viewModel::onThemeSelected,
                     onOrbSizeChanged = viewModel::onOrbSizeChanged,
                     onRequestOverlayPermission = ::requestOverlayPermission,
                     onRequestScreenCapturePermission = ::requestScreenCapturePermission,
+                    isPro = billingState is BillingState.Pro,
+                    proPrice = (billingState as? BillingState.Ready)?.price,
+                    onUpgrade = { billingManager.launchPurchase(this@MainActivity) },
                 )
             }
         }
@@ -205,5 +225,10 @@ class MainActivity : ComponentActivity() {
 
             LiveTranslateOverlayService.start(this@MainActivity)
         }
+    }
+
+    override fun onDestroy() {
+        if (::billingManager.isInitialized) billingManager.close()
+        super.onDestroy()
     }
 }

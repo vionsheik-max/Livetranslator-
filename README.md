@@ -28,4 +28,12 @@ Open the project in Android Studio with an Android SDK installed, or set `ANDROI
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
-The repository snapshot used for implementation did not include a local Android SDK, so the final Android compile could not be executed in the sandbox. Core behavior remains covered by the existing unit tests; the first Android Studio/CI run should resolve any environment-specific SDK setup.
+The sandbox build has been validated with API 35 and Java 17. The debug APK is assembled by the same command above.
+
+## Monetization
+
+The app now includes a real Google Play Billing one-time product flow. The product ID is `live_translator_pro`. The free tier keeps basic screen translation available. Pro unlocks the voice interpreter and offline language-pack downloads, while removing ads and recurring fees from the product promise.
+
+Before publishing, create an **in-app product** with ID `live_translator_pro` in Play Console, configure its localized name and price, add the app to an internal testing track, and install the Play-distributed build. A locally sideloaded debug APK cannot complete a real Play purchase.
+
+The app queries localized product details, restores owned purchases, acknowledges completed purchases, and exposes a clear upgrade card in Settings. For a commercial release, the purchase token should also be verified on a secure server through the Google Play Developer API before granting long-lived entitlements; the current client-side flow is suitable for the first internal test track, not a substitute for server-side fraud protection.

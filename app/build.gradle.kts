@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition.korean)
     implementation(libs.mlkit.language.id)
     implementation(libs.mlkit.translate)
+    implementation(libs.play.billing)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)
