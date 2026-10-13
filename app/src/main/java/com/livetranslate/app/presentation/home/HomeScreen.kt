@@ -24,7 +24,6 @@ import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -64,6 +63,7 @@ import androidx.compose.ui.unit.lerp
 import com.livetranslate.app.capture.CaptureSessionState
 import com.livetranslate.app.domain.model.AppLanguage
 import com.livetranslate.app.domain.model.TranslationMode
+import com.livetranslate.app.diagnostics.TranslationRuntimeState
 import com.livetranslate.app.presentation.theme.AppTheme
 
 private enum class AppTab { HOME, LANGUAGES, SETTINGS }
@@ -73,6 +73,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     overlayPermissionGranted: Boolean,
     captureSessionState: CaptureSessionState,
+    runtimeState: TranslationRuntimeState = TranslationRuntimeState.Idle,
     onTargetLanguageSelected: (AppLanguage) -> Unit,
     onLiveTranslationToggled: (Boolean) -> Unit,
     onVoiceInterpreterToggled: (Boolean) -> Unit,
@@ -97,7 +98,7 @@ fun HomeScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
                 when (tab) {
-                    AppTab.HOME -> HomeTab(uiState, overlayPermissionGranted, captureSessionState, onTargetLanguageSelected, onLiveTranslationToggled, onVoiceInterpreterToggled, onModeSelected, onRequestOverlayPermission, onRequestScreenCapturePermission)
+                    AppTab.HOME -> HomeTab(uiState, overlayPermissionGranted, captureSessionState, runtimeState, onTargetLanguageSelected, onLiveTranslationToggled, onVoiceInterpreterToggled, onModeSelected, onRequestOverlayPermission, onRequestScreenCapturePermission)
                     AppTab.LANGUAGES -> LanguagesTab(uiState, onTargetLanguageSelected, onDownloadLanguagePack)
                     AppTab.SETTINGS -> SettingsTab(uiState, onThemeSelected, onOrbSizeChanged, isPro, proPrice, onUpgrade)
                 }
@@ -112,6 +113,7 @@ private fun HomeTab(
     uiState: HomeUiState,
     overlayReady: Boolean,
     captureState: CaptureSessionState,
+    runtimeState: TranslationRuntimeState,
     onTargetLanguageSelected: (AppLanguage) -> Unit,
     onLiveTranslationToggled: (Boolean) -> Unit,
     onVoiceInterpreterToggled: (Boolean) -> Unit,
@@ -131,7 +133,7 @@ private fun HomeTab(
             FeatureTile(Icons.Rounded.Mic, "Voice\nInterpreter", "Two-way conversation", Modifier.weight(1f), uiState.voiceInterpreterEnabled, uiState.theme.secondary)
         }
         FeatureTile(Icons.Rounded.PlayArrow, "Video Captions", "Translated captions for videos", Modifier.fillMaxWidth(), false, uiState.theme.secondary)
-        SessionStatus(overlayReady, captureState, onOverlayPermission, onCapturePermission)
+        SessionStatus(overlayReady, captureState, runtimeState, onOverlayPermission, onCapturePermission)
         ModeRow(uiState.selectedMode, uiState.availableModes, onModeSelected)
     }
 }
@@ -186,9 +188,8 @@ private fun SettingsTab(uiState: HomeUiState, onThemeSelected: (AppTheme) -> Uni
 @Composable
 private fun ReferenceHeader(title: String, subtitle: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        IconButton(onClick = {}) { Icon(Icons.Rounded.Menu, "Menu") }
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), modifier = Modifier.size(40.dp)) {
@@ -252,11 +253,18 @@ private fun LanguagePackRow(language: AppLanguage, selected: Boolean, state: Lan
 }
 
 @Composable
-private fun SessionStatus(overlayReady: Boolean, captureState: CaptureSessionState, onOverlay: () -> Unit, onCapture: () -> Unit) {
-    if (overlayReady && captureState is CaptureSessionState.Ready) return
+private fun SessionStatus(overlayReady: Boolean, captureState: CaptureSessionState, runtimeState: TranslationRuntimeState, onOverlay: () -> Unit, onCapture: () -> Unit) {
+    if (overlayReady && captureState is CaptureSessionState.Ready && runtimeState is TranslationRuntimeState.Ready) return
     GlassPanel {
         Text("Setup", fontWeight = FontWeight.SemiBold)
-        Text(if (!overlayReady) "Allow overlay access so the floating toggle can stay above other apps." else "Allow screen capture to start translating the visible screen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val message = when (runtimeState) {
+            TranslationRuntimeState.Idle -> if (!overlayReady) "Allow overlay access so the floating toggle can stay above other apps." else "Allow screen capture to start translating the visible screen."
+            TranslationRuntimeState.Starting -> "Starting the live translator…"
+            TranslationRuntimeState.WaitingForText -> "Live and scanning. No foreign text is visible yet."
+            is TranslationRuntimeState.Ready -> "Live and translating ${runtimeState.visibleLines} visible line${if (runtimeState.visibleLines == 1) "" else "s"}."
+            is TranslationRuntimeState.Error -> runtimeState.message
+        }
+        Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (!overlayReady) OutlinedButton(onClick = onOverlay, modifier = Modifier.fillMaxWidth()) { Text("Allow overlay") }
         if (captureState is CaptureSessionState.PermissionRequired || captureState is CaptureSessionState.Error) Button(onClick = onCapture, modifier = Modifier.fillMaxWidth()) { Text("Allow screen capture") }
     }

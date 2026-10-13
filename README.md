@@ -43,3 +43,9 @@ The app queries localized product details, restores owned purchases, acknowledge
 The live loop now paces from the start of capture, so OCR work cannot create a backlog on a slow phone. A cheap visual fingerprint skips OCR and translation work for unchanged frames. OCR regions are deduplicated before language detection, repeated source-language lookups are cached, and ML Kit model downloads are performed once per language pair. Independent translation lines no longer share one global lock, and the translation overlay skips redundant Compose recompositions when its text and bounds have not changed.
 
 These are code-level protections rather than a claim that every phone will deliver a fixed frame rate. Before a public launch, benchmark at least a budget, mid-range, and flagship Android device for translation latency, battery use, heat, dropped frames, and scrolling/video subtitle stability.
+
+## Runtime reliability correction
+
+The corrective release isolates each optional ML Kit script recognizer. If a Chinese, Japanese, Korean, or Devanagari model is unavailable, the healthy recognizers continue instead of `awaitAll()` failing the entire OCR frame. The service no longer converts OCR exceptions into a silent empty overlay: the home screen reports whether the session is starting, scanning with no foreign text, translating visible lines, or receiving a capture/OCR error. Granting overlay permission also continues automatically into the screen-capture prompt rather than requiring a second toggle.
+
+The repository build and tests pass, but a physical Android-device run is still required to prove MediaProjection and vendor-specific overlay behavior. The new runtime status is intentionally there to make that final test observable instead of guessing from a blank screen.

@@ -71,7 +71,12 @@ class OnDeviceTranslationPipeline(
         val image = InputImage.fromBitmap(bitmap, 0)
         val blocks = coroutineScope {
             recognizers.map { recognizer ->
-                async { recognizer.process(image).await().textBlocks }
+                async {
+                    // Optional script models can be unavailable on a device. Keep the
+                    // bundled Latin recognizer and every other healthy recognizer alive.
+                    runCatching { recognizer.process(image).await().textBlocks }
+                        .getOrDefault(emptyList())
+                }
             }.awaitAll().flatten()
         }
         val regions = blocks.flatMapIndexed { blockIndex, block ->

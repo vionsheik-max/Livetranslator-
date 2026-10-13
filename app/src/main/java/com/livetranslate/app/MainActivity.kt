@@ -19,6 +19,7 @@ import com.livetranslate.app.capture.ScreenCaptureManager
 import com.livetranslate.app.billing.BillingState
 import com.livetranslate.app.billing.PlayBillingManager
 import com.livetranslate.app.data.preferences.SettingsRepository
+import com.livetranslate.app.diagnostics.TranslationRuntimeState
 import com.livetranslate.app.overlay.OverlayPermissionManager
 import com.livetranslate.app.presentation.home.HomeScreen
 import com.livetranslate.app.presentation.home.HomeViewModel
@@ -36,6 +37,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var billingManager: PlayBillingManager
     private val overlayPermissionGranted = mutableStateOf(false)
     private var pendingVoiceStart = false
+    private var pendingScreenTranslationStart = false
     private val microphonePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
             )
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val billingState by billingManager.state.collectAsStateWithLifecycle()
+            val runtimeState by (application as LiveTranslateApplication).appContainer.translationRuntimeMonitor.state.collectAsStateWithLifecycle()
             LaunchedEffect(uiState.theme) {
                 LauncherIconManager.apply(this@MainActivity, uiState.theme)
             }
@@ -83,6 +86,7 @@ class MainActivity : ComponentActivity() {
                     uiState = uiState,
                     overlayPermissionGranted = overlayPermissionGranted.value,
                     captureSessionState = captureSessionState,
+                    runtimeState = runtimeState,
                     onTargetLanguageSelected = viewModel::onTargetLanguageSelected,
                     onLiveTranslationToggled = ::handleLiveTranslationToggle,
                     onVoiceInterpreterToggled = { enabled ->
@@ -117,6 +121,11 @@ class MainActivity : ComponentActivity() {
         val permissionGranted = OverlayPermissionManager.canDrawOverlays(this)
         overlayPermissionGranted.value = permissionGranted
 
+        if (pendingScreenTranslationStart && permissionGranted) {
+            pendingScreenTranslationStart = false
+            requestScreenCapturePermission()
+        }
+
         lifecycleScope.launch {
             val settings = settingsRepository.settings.first()
             if (settings.liveTranslationEnabled && !permissionGranted) {
@@ -144,6 +153,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleLiveTranslationToggle(enabled: Boolean) {
         if (enabled && !OverlayPermissionManager.canDrawOverlays(this)) {
+            pendingScreenTranslationStart = true
             requestOverlayPermission()
             return
         }

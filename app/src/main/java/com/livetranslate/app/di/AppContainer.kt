@@ -5,10 +5,13 @@ import com.livetranslate.app.capture.MediaProjectionScreenCaptureManager
 import com.livetranslate.app.capture.ScreenCaptureManager
 import com.livetranslate.app.data.preferences.DataStoreSettingsRepository
 import com.livetranslate.app.data.preferences.SettingsRepository
+import com.livetranslate.app.diagnostics.TranslationRuntimeMonitor
 
 class AppContainer(
     context: Context,
 ) {
+    val translationRuntimeMonitor = TranslationRuntimeMonitor()
+
     val settingsRepository: SettingsRepository = DataStoreSettingsRepository(
         context = context.applicationContext,
     )

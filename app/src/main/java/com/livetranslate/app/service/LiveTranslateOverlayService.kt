@@ -18,6 +18,7 @@ import com.livetranslate.app.LiveTranslateApplication
 import com.livetranslate.app.MainActivity
 import com.livetranslate.app.R
 import com.livetranslate.app.data.preferences.SettingsRepository
+import com.livetranslate.app.diagnostics.TranslationRuntimeState
 import com.livetranslate.app.overlay.OverlayPermissionManager
 import com.livetranslate.app.overlay.OverlayUiState
 import com.livetranslate.app.overlay.OverlayWindowController
@@ -35,6 +36,8 @@ class LiveTranslateOverlayService : LifecycleService() {
         get() = (application as LiveTranslateApplication).appContainer.settingsRepository
     private val captureManager
         get() = (application as LiveTranslateApplication).appContainer.screenCaptureManager
+    private val runtimeMonitor
+        get() = (application as LiveTranslateApplication).appContainer.translationRuntimeMonitor
     private val translationPipeline = OnDeviceTranslationPipeline(InMemoryTranslationCache())
     private val textOverlayController by lazy { TranslationTextOverlayController(this, this) }
     private var settingsJob: Job? = null
@@ -74,7 +77,9 @@ class LiveTranslateOverlayService : LifecycleService() {
     }
 
     private fun startSession() {
+        runtimeMonitor.update(TranslationRuntimeState.Starting)
         if (!OverlayPermissionManager.canDrawOverlays(this)) {
+            runtimeMonitor.update(TranslationRuntimeState.Error("Overlay permission is not enabled."))
             lifecycleScope.launch { settingsRepository.setLiveTranslationEnabled(false) }
             stopSelf()
             return
@@ -90,6 +95,7 @@ class LiveTranslateOverlayService : LifecycleService() {
             overlayController.show()
             textOverlayController.show()
         } catch (error: RuntimeException) {
+            runtimeMonitor.update(TranslationRuntimeState.Error(error.message ?: "Could not start the translation overlay."))
             lifecycleScope.launch { settingsRepository.setLiveTranslationEnabled(false) }
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -124,7 +130,7 @@ class LiveTranslateOverlayService : LifecycleService() {
             val startedAt = SystemClock.elapsedRealtime()
             val frame = captureManager.capture()
             if (frame != null) {
-                val translated = runCatching {
+                val result = runCatching {
                     translationPipeline.process(
                         bitmap = frame.bitmap,
                         captureWidth = frame.captureWidth,
@@ -133,9 +139,20 @@ class LiveTranslateOverlayService : LifecycleService() {
                         displayHeight = frame.screenHeight,
                         targetLanguage = targetLanguage,
                     )
-                }.getOrDefault(emptyList())
-                textOverlayController.render(translated)
+                }
+                result.onSuccess { translated ->
+                    runtimeMonitor.update(
+                        if (translated.isEmpty()) TranslationRuntimeState.WaitingForText
+                        else TranslationRuntimeState.Ready(translated.size),
+                    )
+                    textOverlayController.render(translated)
+                }.onFailure { error ->
+                    runtimeMonitor.update(TranslationRuntimeState.Error(error.message ?: "OCR or translation failed."))
+                    textOverlayController.render(emptyList())
+                }
                 frame.bitmap.recycle()
+            } else {
+                runtimeMonitor.update(TranslationRuntimeState.Error("No screen frame received from Android."))
             }
             // Pace from capture start, not after OCR. Slow devices never build a backlog.
             val elapsed = SystemClock.elapsedRealtime() - startedAt
@@ -144,6 +161,7 @@ class LiveTranslateOverlayService : LifecycleService() {
     }
 
     private fun stopSession(resetSetting: Boolean) {
+        runtimeMonitor.update(TranslationRuntimeState.Idle)
         settingsJob?.cancel(); settingsJob = null
         translationJob?.cancel(); translationJob = null
         overlayController.remove(); textOverlayController.remove()
