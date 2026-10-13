@@ -32,7 +32,7 @@ The sandbox build has been validated with API 35 and Java 17. The debug APK is a
 
 ## Monetization
 
-The app now includes a real Google Play Billing one-time product flow. The product ID is `live_translator_pro`. The free tier keeps basic screen translation available. Pro unlocks the voice interpreter and offline language-pack downloads, while removing ads and recurring fees from the product promise.
+The app now includes a real Google Play Billing one-time product flow. The product ID is `live_translator_pro`. The free tier keeps basic screen translation and language-pack downloads available. Pro unlocks the voice interpreter, while removing ads and recurring fees from the product promise.
 
 Before publishing, create an **in-app product** with ID `live_translator_pro` in Play Console, configure its localized name and price, add the app to an internal testing track, and install the Play-distributed build. A locally sideloaded debug APK cannot complete a real Play purchase.
 

@@ -90,6 +90,7 @@ class HomeViewModel(
             try {
                 translator.downloadModelIfNeeded(DownloadConditions.Builder().build()).await()
                 languagePackState.value = LanguagePackState.Ready(language)
+                settingsRepository.setTargetLanguage(language)
             } catch (error: Exception) {
                 languagePackState.value = LanguagePackState.Failed(
                     error.message ?: "Download failed. Check your connection and try again.",

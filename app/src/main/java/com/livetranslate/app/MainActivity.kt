@@ -97,13 +97,7 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onModeSelected = viewModel::onModeSelected,
-                    onDownloadLanguagePack = { language ->
-                        if (billingManager.state.value is BillingState.Pro) {
-                            viewModel.downloadLanguagePack(language)
-                        } else {
-                            billingManager.launchPurchase(this@MainActivity)
-                        }
-                    },
+                    onDownloadLanguagePack = viewModel::downloadLanguagePack,
                     onThemeSelected = viewModel::onThemeSelected,
                     onOrbSizeChanged = viewModel::onOrbSizeChanged,
                     onRequestOverlayPermission = ::requestOverlayPermission,

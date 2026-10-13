@@ -271,9 +271,26 @@ private fun LanguagePackRow(language: AppLanguage, selected: Boolean, state: Lan
     GlassPanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f), modifier = Modifier.size(38.dp)) { Box(contentAlignment = Alignment.Center) { Text(language.displayName.take(2), style = MaterialTheme.typography.labelMedium) } }
-            Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) { Text(language.displayName, fontWeight = FontWeight.SemiBold); Text(if (selected) "Current target" else "Offline model available on demand", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            if (selected) Icon(Icons.Rounded.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
-            else OutlinedButton(onClick = { onDownload(language); onSelected(language) }) { Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(17.dp)); Text("Download") }
+            val ready = state is LanguagePackState.Ready && state.language == language
+            Column(modifier = Modifier.padding(start = 10.dp).weight(1f)) {
+                Text(language.displayName, fontWeight = FontWeight.SemiBold)
+                Text(
+                    when {
+                        ready -> "Ready for offline translation"
+                        selected -> "Current target • model not downloaded"
+                        state is LanguagePackState.Failed -> state.message
+                        else -> "Download the on-device model"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (state is LanguagePackState.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+            }
+            when {
+                ready -> Icon(Icons.Rounded.Check, "Downloaded", tint = MaterialTheme.colorScheme.primary)
+                state is LanguagePackState.Downloading -> CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                else -> OutlinedButton(onClick = { onDownload(language) }) { Icon(Icons.Rounded.CloudDownload, null, modifier = Modifier.size(17.dp)); Text(if (state is LanguagePackState.Failed) "Retry" else "Download") }
+            }
         }
     }
 }
