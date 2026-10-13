@@ -49,3 +49,7 @@ These are code-level protections rather than a claim that every phone will deliv
 The corrective release isolates each optional ML Kit script recognizer. If a Chinese, Japanese, Korean, or Devanagari model is unavailable, the healthy recognizers continue instead of `awaitAll()` failing the entire OCR frame. The service no longer converts OCR exceptions into a silent empty overlay: the home screen reports whether the session is starting, scanning with no foreign text, translating visible lines, or receiving a capture/OCR error. Granting overlay permission also continues automatically into the screen-capture prompt rather than requiring a second toggle.
 
 The repository build and tests pass, but a physical Android-device run is still required to prove MediaProjection and vendor-specific overlay behavior. The new runtime status is intentionally there to make that final test observable instead of guessing from a blank screen.
+
+## What each feature actually translates
+
+**Screen Translation** captures visible pixels through Android MediaProjection and translates foreign text in supported apps. **Video & game subtitles** uses the same path, so it translates subtitles or other text that is visibly rendered on the screen. It does not claim to extract protected internal audio from DRM video or game engines. **Voice Interpreter** uses the microphone and Android speech recognition, then renders translated speech as captions. Each flow is now connected to a real control; decorative cards are not used as substitutes for functionality.

@@ -1,6 +1,7 @@
 package com.livetranslate.app.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,11 +129,8 @@ private fun HomeTab(
         ReferenceHeader(title = "Live Translator", subtitle = "Break language barriers")
         LanguagePairRow(uiState.targetLanguage, uiState.availableLanguages, onTargetLanguageSelected)
         LiveTranslationHero(uiState, onLiveTranslationToggled)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            FeatureTile(Icons.Rounded.ScreenShare, "Screen\nTranslation", "Translate text on screen", Modifier.weight(1f), uiState.liveTranslationEnabled, uiState.theme.primary)
-            FeatureTile(Icons.Rounded.Mic, "Voice\nInterpreter", "Two-way conversation", Modifier.weight(1f), uiState.voiceInterpreterEnabled, uiState.theme.secondary)
-        }
-        FeatureTile(Icons.Rounded.PlayArrow, "Video Captions", "Translated captions for videos", Modifier.fillMaxWidth(), false, uiState.theme.secondary)
+        FeatureToggleCard(Icons.Rounded.Mic, "Voice interpreter", "Translate spoken dialogue into captions", uiState.voiceInterpreterEnabled, uiState.theme.secondary, onVoiceInterpreterToggled)
+        FeatureTile(Icons.Rounded.PlayArrow, "Video & game subtitles", "Translate visible subtitles on screen", Modifier.fillMaxWidth(), uiState.liveTranslationEnabled, uiState.theme.secondary) { onLiveTranslationToggled(true) }
         SessionStatus(overlayReady, captureState, runtimeState, onOverlayPermission, onCapturePermission)
         ModeRow(uiState.selectedMode, uiState.availableModes, onModeSelected)
     }
@@ -259,8 +257,8 @@ private fun FeatureToggleCard(icon: ImageVector, title: String, subtitle: String
 }
 
 @Composable
-private fun FeatureTile(icon: ImageVector, title: String, subtitle: String, modifier: Modifier, checked: Boolean, accent: Color) {
-    GlassPanel(modifier) {
+private fun FeatureTile(icon: ImageVector, title: String, subtitle: String, modifier: Modifier, checked: Boolean, accent: Color, onClick: (() -> Unit)? = null) {
+    GlassPanel(modifier.clickable(enabled = onClick != null) { onClick?.invoke() }) {
         Surface(shape = CircleShape, color = accent.copy(alpha = 0.20f), modifier = Modifier.size(38.dp)) { Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = accent) } }
         Text(title, fontWeight = FontWeight.SemiBold)
         Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
