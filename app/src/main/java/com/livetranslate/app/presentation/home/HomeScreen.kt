@@ -127,7 +127,7 @@ private fun HomeTab(
     ) {
         ReferenceHeader(title = "Live Translator", subtitle = "Break language barriers")
         LanguagePairRow(uiState.targetLanguage, uiState.availableLanguages, onTargetLanguageSelected)
-        FeatureToggleCard(Icons.Rounded.Translate, "Live Translation", "Translate text on your screen", uiState.liveTranslationEnabled, uiState.theme.primary, onLiveTranslationToggled)
+        LiveTranslationHero(uiState, onLiveTranslationToggled)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             FeatureTile(Icons.Rounded.ScreenShare, "Screen\nTranslation", "Translate text on screen", Modifier.weight(1f), uiState.liveTranslationEnabled, uiState.theme.primary)
             FeatureTile(Icons.Rounded.Mic, "Voice\nInterpreter", "Two-way conversation", Modifier.weight(1f), uiState.voiceInterpreterEnabled, uiState.theme.secondary)
@@ -135,6 +135,34 @@ private fun HomeTab(
         FeatureTile(Icons.Rounded.PlayArrow, "Video Captions", "Translated captions for videos", Modifier.fillMaxWidth(), false, uiState.theme.secondary)
         SessionStatus(overlayReady, captureState, runtimeState, onOverlayPermission, onCapturePermission)
         ModeRow(uiState.selectedMode, uiState.availableModes, onModeSelected)
+    }
+}
+
+@Composable
+private fun LiveTranslationHero(uiState: HomeUiState, onToggle: (Boolean) -> Unit) {
+    val theme = uiState.theme
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = theme.backgroundBottom.copy(alpha = 0.88f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, theme.primary.copy(alpha = 0.22f)),
+        tonalElevation = 0.dp,
+    ) {
+        Column(modifier = Modifier.background(Brush.linearGradient(listOf(theme.glass, Color.Transparent))).padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = theme.primary.copy(alpha = 0.18f), border = androidx.compose.foundation.BorderStroke(1.dp, theme.primary.copy(alpha = 0.30f)), modifier = Modifier.size(66.dp)) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Translate, null, tint = theme.primary, modifier = Modifier.size(34.dp)) }
+                }
+                Column(modifier = Modifier.padding(start = 14.dp).weight(1f)) {
+                    Text("Live translation", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(if (uiState.liveTranslationEnabled) "Watching your screen now" else "Translate text wherever you are", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Surface(shape = CircleShape, color = if (uiState.liveTranslationEnabled) theme.primary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), modifier = Modifier.size(12.dp)) {}
+            }
+            Button(onClick = { onToggle(!uiState.liveTranslationEnabled) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                Text(if (uiState.liveTranslationEnabled) "Stop translation" else "Start live translation")
+            }
+            Text("Private on-device processing • Floating translations stay aligned to the screen", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -340,7 +368,7 @@ private fun BottomBar(tab: AppTab, theme: AppTheme, onTabSelected: (AppTab) -> U
 
 @Composable
 private fun BottomItem(icon: ImageVector, label: String, selected: Boolean, theme: AppTheme, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(18.dp)).padding(horizontal = 18.dp, vertical = 4.dp)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(18.dp)).background(if (selected) theme.primary.copy(alpha = 0.14f) else Color.Transparent).padding(horizontal = 18.dp, vertical = 4.dp)) {
         IconButton(onClick = onClick) { Icon(icon, label, tint = if (selected) theme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
         Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) theme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
     }
