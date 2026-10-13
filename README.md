@@ -37,3 +37,9 @@ The app now includes a real Google Play Billing one-time product flow. The produ
 Before publishing, create an **in-app product** with ID `live_translator_pro` in Play Console, configure its localized name and price, add the app to an internal testing track, and install the Play-distributed build. A locally sideloaded debug APK cannot complete a real Play purchase.
 
 The app queries localized product details, restores owned purchases, acknowledges completed purchases, and exposes a clear upgrade card in Settings. For a commercial release, the purchase token should also be verified on a secure server through the Google Play Developer API before granting long-lived entitlements; the current client-side flow is suitable for the first internal test track, not a substitute for server-side fraud protection.
+
+## Performance guarantees in the current release
+
+The live loop now paces from the start of capture, so OCR work cannot create a backlog on a slow phone. A cheap visual fingerprint skips OCR and translation work for unchanged frames. OCR regions are deduplicated before language detection, repeated source-language lookups are cached, and ML Kit model downloads are performed once per language pair. Independent translation lines no longer share one global lock, and the translation overlay skips redundant Compose recompositions when its text and bounds have not changed.
+
+These are code-level protections rather than a claim that every phone will deliver a fixed frame rate. Before a public launch, benchmark at least a budget, mid-range, and flagship Android device for translation latency, battery use, heat, dropped frames, and scrolling/video subtitle stability.

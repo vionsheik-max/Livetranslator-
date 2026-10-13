@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -120,6 +121,7 @@ class LiveTranslateOverlayService : LifecycleService() {
 
     private suspend fun runTranslationLoop(targetLanguage: com.livetranslate.app.domain.model.AppLanguage) {
         while (true) {
+            val startedAt = SystemClock.elapsedRealtime()
             val frame = captureManager.capture()
             if (frame != null) {
                 val translated = runCatching {
@@ -135,8 +137,9 @@ class LiveTranslateOverlayService : LifecycleService() {
                 textOverlayController.render(translated)
                 frame.bitmap.recycle()
             }
-            // Refresh faster than once per second so scrolling text never waits for a full second.
-            delay(FRAME_INTERVAL_MS)
+            // Pace from capture start, not after OCR. Slow devices never build a backlog.
+            val elapsed = SystemClock.elapsedRealtime() - startedAt
+            delay((FRAME_INTERVAL_MS - elapsed).coerceAtLeast(MIN_FRAME_GAP_MS))
         }
     }
 
@@ -191,6 +194,7 @@ class LiveTranslateOverlayService : LifecycleService() {
         private const val NOTIFICATION_CHANNEL_ID = "live_translate_overlay"
         private const val NOTIFICATION_ID = 404
         private const val FRAME_INTERVAL_MS = 180L
+        private const val MIN_FRAME_GAP_MS = 24L
 
         fun start(context: Context) = ContextCompat.startForegroundService(
             context,

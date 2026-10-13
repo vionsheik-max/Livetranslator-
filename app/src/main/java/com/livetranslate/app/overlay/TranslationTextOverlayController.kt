@@ -64,8 +64,8 @@ class TranslationTextOverlayController(
     }
 
     fun render(next: List<RenderedTranslation>) {
+        if (next == translations.value) return
         translations.value = next
-        view?.postInvalidate()
     }
 
     fun remove() {

@@ -29,9 +29,10 @@ import com.livetranslate.core.pipeline.TranslationProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.tasks.await
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.tasks.await
 
 class OnDeviceTranslationPipeline(
     private val cache: TranslationCache,
@@ -50,8 +51,10 @@ class OnDeviceTranslationPipeline(
     private val sourceLanguageCache = object : LinkedHashMap<String, String>(256, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean = size > 512
     }
-    private val providerMutex = Mutex()
     private var previousFrame: DetectedTextFrame? = null
+    private var lastFingerprint: Long? = null
+    private var lastTargetLanguage: String? = null
+    private var lastRendered: List<RenderedTranslation> = emptyList()
 
     suspend fun process(
         bitmap: Bitmap,
@@ -61,6 +64,10 @@ class OnDeviceTranslationPipeline(
         displayHeight: Int,
         targetLanguage: AppLanguage,
     ): List<RenderedTranslation> {
+        val fingerprint = bitmapFingerprint(bitmap)
+        if (fingerprint == lastFingerprint && targetLanguage.tag == lastTargetLanguage) {
+            return lastRendered
+        }
         val image = InputImage.fromBitmap(bitmap, 0)
         val blocks = coroutineScope {
             recognizers.map { recognizer ->
@@ -82,31 +89,36 @@ class OnDeviceTranslationPipeline(
                 )
             }
         }.filter { it.text.isNotBlank() && it.bounds.width > 0 && it.bounds.height > 0 }
+            .distinctBy { region ->
+                val normalized = region.text.lowercase().replace(Regex("\\s+"), " ").trim()
+                "$normalized:${region.bounds.left}:${region.bounds.top}:${region.bounds.right}:${region.bounds.bottom}"
+            }
         val frame = DetectedTextFrame(System.currentTimeMillis(), regions)
         val changes = detector.detectChanges(previousFrame, frame)
         previousFrame = frame
         val changed = changes.filter { it.current != null && it.type != com.livetranslate.core.detector.ChangeType.REMOVED }
+        val sourceTags = ConcurrentHashMap<String, String>()
         coroutineScope {
             changed.mapNotNull { it.current }
                 .distinctBy { it.text }
                 .map { region ->
                     async {
-                        val sourceTag = identifySource(region.text) ?: return@async
+                        val sourceTag = identifySource(region.text)
+                        if (sourceTag != null) sourceTags[region.text] = sourceTag
+                        if (sourceTag == null) return@async
                         if (sourceTag == targetLanguage.tag || sourceTag == "und") return@async
                         val key = TranslationCacheKey(sourceTag, targetLanguage.tag, region.text)
                         if (cache.get(key) == null) {
                             runCatching {
-                                providerMutex.withLock {
-                                    translationProvider.translate(region.text, sourceTag, targetLanguage.tag)
-                                }
+                                translationProvider.translate(region.text, sourceTag, targetLanguage.tag)
                             }.onSuccess { cache.put(key, it) }
                         }
                     }
                 }
                 .awaitAll()
         }
-        return frame.regions.mapNotNull { region ->
-            val sourceTag = identifySource(region.text)
+        val rendered = frame.regions.mapNotNull { region ->
+            val sourceTag = sourceTags[region.text] ?: identifySource(region.text)
             if (sourceTag == null || sourceTag == targetLanguage.tag || sourceTag == "und") return@mapNotNull null
             val translated = cache.get(TranslationCacheKey(sourceTag, targetLanguage.tag, region.text))
                 ?: return@mapNotNull null
@@ -121,10 +133,17 @@ class OnDeviceTranslationPipeline(
                 targetLanguage = targetLanguage.tag,
             )
         }
+        lastFingerprint = fingerprint
+        lastTargetLanguage = targetLanguage.tag
+        lastRendered = rendered
+        return rendered
     }
 
     fun reset() {
         previousFrame = null
+        lastFingerprint = null
+        lastTargetLanguage = null
+        lastRendered = emptyList()
         cache.clear()
         synchronized(sourceLanguageCache) { sourceLanguageCache.clear() }
     }
@@ -144,17 +163,35 @@ class OnDeviceTranslationPipeline(
         }
         return identified
     }
+
+    /** A cheap visual fingerprint avoids running five OCR models on unchanged frames. */
+    private fun bitmapFingerprint(bitmap: Bitmap): Long {
+        val sampleWidth = 24
+        val sampleHeight = 14
+        var hash = -3750763034362895579L
+        for (y in 0 until sampleHeight) {
+            val sourceY = (y * bitmap.height / sampleHeight).coerceAtMost(bitmap.height - 1)
+            for (x in 0 until sampleWidth) {
+                val sourceX = (x * bitmap.width / sampleWidth).coerceAtMost(bitmap.width - 1)
+                val pixel = bitmap.getPixel(sourceX, sourceY)
+                hash = (hash xor (pixel.toLong() and 0x00ffffffL)) * 0x100000001b3L
+            }
+        }
+        return hash xor (bitmap.width.toLong() shl 32) xor bitmap.height.toLong()
+    }
 }
 
 private class MlKitTranslationProvider : TranslationProvider {
-    private val translators = mutableMapOf<String, Translator>()
+    private val translators = ConcurrentHashMap<String, Translator>()
+    private val modelLocks = ConcurrentHashMap<String, Mutex>()
+    private val readyModels = ConcurrentHashMap.newKeySet<String>()
 
     override suspend fun translate(text: String, sourceLanguage: String?, targetLanguage: String): String {
         val source = TranslateLanguage.fromLanguageTag(sourceLanguage ?: "") ?: return text
         val target = TranslateLanguage.fromLanguageTag(targetLanguage) ?: return text
         if (source == target) return text
         val key = "$source->$target"
-        val translator = translators.getOrPut(key) {
+        val translator = translators.computeIfAbsent(key) {
             Translation.getClient(
                 TranslatorOptions.Builder()
                     .setSourceLanguage(source)
@@ -162,7 +199,15 @@ private class MlKitTranslationProvider : TranslationProvider {
                     .build(),
             )
         }
-        translator.downloadModelIfNeeded(DownloadConditions.Builder().build()).await()
+        if (!readyModels.contains(key)) {
+            modelLocks.computeIfAbsent(key) { Mutex() }.withLock {
+                if (readyModels.add(key)) {
+                    runCatching {
+                        translator.downloadModelIfNeeded(DownloadConditions.Builder().build()).await()
+                    }.onFailure { readyModels.remove(key) }.getOrThrow()
+                }
+            }
+        }
         return translator.translate(text).await()
     }
 }
